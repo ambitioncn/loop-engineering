@@ -3,6 +3,7 @@ import path from 'node:path';
 import {
   applyBreaker,
   configFilesFromArgs,
+  doctorReport,
   failureSignature,
   initWorkspace,
   initQueueConfig,
@@ -18,6 +19,7 @@ import {
   queuePeek,
   queueRequeue,
   queueStatus,
+  summarizeLoopRuns,
   runCheck,
   runQueueOnce,
   runsDirFor,
@@ -32,6 +34,7 @@ function parseArgs(argv) {
     if (a === '--root') args.root = path.resolve(argv[++i]);
     else if (a === '--config') args.config = argv[++i];
     else if (a === '--queue') args.queue = argv[++i];
+    else if (a === '--id') args.id = argv[++i];
     else if (a === '--title') args.title = argv[++i];
     else if (a === '--task') args.task = argv[++i];
     else if (a === '--file') args.file = argv[++i];
@@ -63,6 +66,8 @@ Usage:
   loop-engineering run --config configs/loops/name.json [--root <workspace>] [--json]
   loop-engineering verify [--config configs/loops/name.json] [--root <workspace>]
   loop-engineering status [--config configs/loops/name.json] [--root <workspace>]
+  loop-engineering summarize [--id name | --queue name] [--limit 20] [--root <workspace>] [--json]
+  loop-engineering doctor [--root <workspace>] [--json]
   loop-engineering enqueue --queue name --title "Title" (--task "Body" | --file task.md) [--root <workspace>]
   loop-engineering run-queue --config configs/loops/queues/name.json [--root <workspace>]
   loop-engineering run-queue --queue name --dispatcher "command" [--preflight-config configs/loops/name.json] [--root <workspace>]
@@ -207,6 +212,54 @@ async function statusCommand(args) {
   return 0;
 }
 
+async function summarizeCommand(args) {
+  const summaries = await summarizeLoopRuns(args.root, {
+    id: args.id,
+    queue: args.queue,
+    limit: args.limit ?? 20
+  });
+  if (args.json) {
+    console.log(JSON.stringify(summaries, null, 2));
+  } else if (summaries.length === 0) {
+    console.log('no run artifacts found');
+  } else {
+    for (const summary of summaries) {
+      console.log(summary.id);
+      console.log(`  inspected/readable: ${summary.inspectedRuns}/${summary.readableRuns}`);
+      console.log(`  latest: ${summary.latestStatus ?? 'none'} ${summary.latestRun ?? ''}`.trimEnd());
+      console.log(`  success rate: ${summary.successRate === null ? 'n/a' : `${summary.successRate}%`}`);
+      console.log(`  avg duration: ${summary.averageDurationMs === null ? 'n/a' : `${summary.averageDurationMs}ms`}`);
+      console.log(`  counts: ${Object.entries(summary.counts).map(([k, v]) => `${k}=${v}`).join(', ') || 'none'}`);
+      if (summary.recentFailures.length > 0) {
+        console.log('  recent failures:');
+        for (const failure of summary.recentFailures) {
+          console.log(`    - ${failure.status} ${failure.file}`);
+          if (failure.reason) console.log(`      reason: ${failure.reason}`);
+        }
+      }
+    }
+  }
+  return 0;
+}
+
+async function doctorCommand(args) {
+  const report = await doctorReport(args.root, { limit: args.limit ?? 10 });
+  if (args.json) {
+    console.log(JSON.stringify(report, null, 2));
+  } else {
+    console.log(`loop-engineering doctor: ${report.ok ? 'ok' : 'fail'} (${report.failCount} fail, ${report.warnCount} warn)`);
+    for (const check of report.checks) {
+      const status = check.ok ? 'ok' : check.level;
+      console.log(`${status} ${check.id}`);
+      if (!check.ok && check.detail) {
+        const detail = typeof check.detail === 'string' ? check.detail : JSON.stringify(check.detail);
+        console.log(`  ${detail}`);
+      }
+    }
+  }
+  return report.failCount > 0 ? 1 : 0;
+}
+
 async function initCommand(args) {
   const config = await initWorkspace(args.root, { force: args.force });
   console.log(`initialized loop engineering at ${args.root}`);
@@ -334,6 +387,8 @@ async function main() {
   if (command === 'run') return runCommand(args);
   if (command === 'verify') return verifyCommand(args);
   if (command === 'status') return statusCommand(args);
+  if (command === 'summarize') return summarizeCommand(args);
+  if (command === 'doctor') return doctorCommand(args);
   if (command === 'enqueue') return enqueueCommand(args);
   if (command === 'run-queue') return runQueueCommand(args);
   if (command === 'queue-status') return queueStatusCommand(args);

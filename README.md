@@ -28,6 +28,8 @@ loop-engineering init --root /path/to/workspace
 loop-engineering verify --root /path/to/workspace
 loop-engineering run --root /path/to/workspace --config configs/loops/workspace-health.json
 loop-engineering status --root /path/to/workspace
+loop-engineering doctor --root /path/to/workspace
+loop-engineering summarize --root /path/to/workspace --limit 20
 loop-engineering queue-init --queue agent-tasks
 loop-engineering enqueue --queue agent-tasks --title "Check logs" --task "Inspect the latest logs."
 loop-engineering run-queue --config configs/loops/queues/agent-tasks.json
@@ -43,6 +45,32 @@ Artifacts are written to:
 runtime/loops/<loop_id>/state.json
 runtime/loops/<loop_id>/runs/*.json
 ```
+
+## Observability
+
+Use `doctor` for a read-only health view of the loop workspace:
+
+```bash
+loop-engineering doctor --root /path/to/workspace
+loop-engineering doctor --root /path/to/workspace --json
+```
+
+It checks the workspace root, loop configs, queue configs, runtime directories,
+latest loop outcomes, queue status, active tasks, failed tasks, and active queue
+locks. It exits non-zero only on hard failures; warnings are reported but do not
+fail the command.
+
+Use `summarize` to inspect recent run artifacts:
+
+```bash
+loop-engineering summarize --root /path/to/workspace --limit 20
+loop-engineering summarize --root /path/to/workspace --id workspace-health
+loop-engineering summarize --root /path/to/workspace --queue agent-tasks
+```
+
+The summary reports inspected/readable/skipped run counts, status counts,
+success rate, average duration, latest matching run, and recent failure reasons.
+`--id` filters loop-spec runs, while `--queue` filters queue-dispatch runs.
 
 ## Cron Wrapper
 

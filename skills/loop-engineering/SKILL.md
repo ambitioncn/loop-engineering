@@ -27,6 +27,8 @@ Prefer the npm CLI when installed:
 loop-engineering verify --root /path/to/workspace
 loop-engineering run --root /path/to/workspace --config configs/loops/<id>.json
 loop-engineering status --root /path/to/workspace
+loop-engineering doctor --root /path/to/workspace
+loop-engineering summarize --root /path/to/workspace --limit 20
 loop-engineering enqueue --root /path/to/workspace --queue <queue> --title "Title" --task "Task body"
 loop-engineering queue-init --root /path/to/workspace --queue <queue>
 loop-engineering run-queue --root /path/to/workspace --config configs/loops/queues/<queue>.json
@@ -82,6 +84,32 @@ Supported check types:
 
 - `files`: assert relative paths exist.
 - `command`: run a shell command and compare its exit code.
+
+## Observability
+
+Use read-only diagnostics before changing loop configs or queue state:
+
+```bash
+loop-engineering doctor --root /path/to/workspace
+loop-engineering doctor --root /path/to/workspace --json
+```
+
+`doctor` checks the workspace root, loop configs, queue configs, runtime
+directories, latest loop outcomes, queue status, active tasks, failed tasks, and
+active queue locks. Warnings do not fail the command; hard config/runtime
+errors exit non-zero.
+
+Use `summarize` when the user asks how a loop or queue has been doing:
+
+```bash
+loop-engineering summarize --root /path/to/workspace --limit 20
+loop-engineering summarize --root /path/to/workspace --id workspace-health
+loop-engineering summarize --root /path/to/workspace --queue agent-tasks
+```
+
+`summarize` reports inspected/readable/skipped runs, status counts, success
+rate, average duration, latest matching run, and recent failure reasons. Use
+`--id` for loop-spec runs and `--queue` for queue-dispatch runs.
 
 ## Queue Runner
 
@@ -155,7 +183,8 @@ runtime/loops/<queue>/runs/
 3. Run `loop-engineering verify --config ...` for loop specs.
 4. Run one manual tick with `loop-engineering run --config ...` or `loop-engineering run-queue ...`.
 5. Inspect `runtime/loops/<id>/runs/*.json` or `runtime/loops/<queue>/runs/*.json` before summarizing.
-6. Add cron only after a manual run succeeds.
+6. Run `loop-engineering doctor --root ...` after changing queue or loop configuration.
+7. Add cron only after a manual run succeeds.
 
 ## Cron
 

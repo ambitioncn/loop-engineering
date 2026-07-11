@@ -1,7 +1,7 @@
 # npm Package
 
 Package name: `agent-loop-engineering`
-Version: `0.2.1`
+Version: `0.2.2`
 
 Install from npm:
 
@@ -16,6 +16,8 @@ loop-engineering init --root /path/to/workspace
 loop-engineering verify --root /path/to/workspace
 loop-engineering run --root /path/to/workspace --config configs/loops/<id>.json
 loop-engineering status --root /path/to/workspace
+loop-engineering doctor --root /path/to/workspace
+loop-engineering summarize --root /path/to/workspace --limit 20
 loop-engineering enqueue --root /path/to/workspace --queue <queue> --title "Title" --task "Task body"
 loop-engineering queue-init --root /path/to/workspace --queue <queue>
 loop-engineering run-queue --root /path/to/workspace --config configs/loops/queues/<queue>.json
