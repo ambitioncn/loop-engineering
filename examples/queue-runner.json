@@ -1,27 +1,16 @@
 {
-  "id": "queue-runner",
-  "goal": "Keep the generic loop task queue runnable and visible.",
-  "level": "L1",
-  "mode": "report-only",
-  "maxRuntimeMs": 120000,
-  "description": "A starter verification loop for a queue-driven workflow.",
-  "humanGates": [
-    "dispatcher command changes",
-    "external sends",
-    "destructive commands",
-    "production config changes"
-  ],
-  "breaker": {
-    "maxConsecutiveFailures": 3,
-    "sameFailureThreshold": 2
-  },
-  "checks": [
-    {
-      "id": "queue-status",
-      "type": "command",
-      "cmd": "loop-engineering queue-status --queue agent-tasks --json >/dev/null",
-      "expectExitCode": 0,
-      "timeoutMs": 10000
-    }
-  ]
+  "queue": "agent-tasks",
+  "description": "Generic queue runner config. Keep dispatcher local to the target workspace.",
+  "dispatcher": "node scripts/dispatch-task.mjs",
+  "preflightConfig": "configs/loops/workspace-health.json",
+  "timeoutMs": 1800000,
+  "leaseMs": 1860000,
+  "staleActiveMs": 3600000,
+  "retry": {
+    "maxAttempts": 1,
+    "retryDelayMs": 0,
+    "retryExitCodes": [
+      1
+    ]
+  }
 }

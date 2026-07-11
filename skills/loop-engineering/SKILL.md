@@ -28,8 +28,12 @@ loop-engineering verify --root /path/to/workspace
 loop-engineering run --root /path/to/workspace --config configs/loops/<id>.json
 loop-engineering status --root /path/to/workspace
 loop-engineering enqueue --root /path/to/workspace --queue <queue> --title "Title" --task "Task body"
-loop-engineering run-queue --root /path/to/workspace --queue <queue> --dispatcher "command"
+loop-engineering queue-init --root /path/to/workspace --queue <queue>
+loop-engineering run-queue --root /path/to/workspace --config configs/loops/queues/<queue>.json
 loop-engineering queue-status --root /path/to/workspace --queue <queue>
+loop-engineering queue-peek --root /path/to/workspace --queue <queue>
+loop-engineering queue-cancel --root /path/to/workspace --queue <queue> --task-id <id>
+loop-engineering queue-requeue --root /path/to/workspace --queue <queue> --task-id <id>
 ```
 
 If the package is not installed but exists in the workspace, use:
@@ -83,6 +87,30 @@ Supported check types:
 
 Use queue commands only for explicit loop-managed handoffs, not ordinary chat.
 
+Create a queue config first when one does not exist:
+
+```bash
+loop-engineering queue-init --root /path/to/workspace --queue agent-tasks
+```
+
+Queue configs live under `configs/loops/queues/<queue>.json` and can define:
+
+```json
+{
+  "queue": "agent-tasks",
+  "dispatcher": "node scripts/dispatch-task.mjs",
+  "preflightConfig": "configs/loops/workspace-health.json",
+  "timeoutMs": 1800000,
+  "leaseMs": 1860000,
+  "staleActiveMs": 3600000,
+  "retry": {
+    "maxAttempts": 1,
+    "retryDelayMs": 0,
+    "retryExitCodes": [1]
+  }
+}
+```
+
 ```bash
 loop-engineering enqueue \
   --root /path/to/workspace \
@@ -94,16 +122,20 @@ loop-engineering enqueue \
 ```bash
 loop-engineering run-queue \
   --root /path/to/workspace \
-  --queue agent-tasks \
-  --preflight-config configs/loops/workspace-health.json \
-  --dispatcher "node scripts/dispatch-task.mjs" \
-  --timeout-ms 1800000
+  --config configs/loops/queues/agent-tasks.json
 ```
 
 The dispatcher receives `LOOP_TASK_ID`, `LOOP_TASK_TITLE`, `LOOP_TASK_BODY`,
-`LOOP_TASK_FILE`, `LOOP_TASK_FILE_REL`, `LOOP_QUEUE_ID`, and `LOOP_RUN_ID`.
+`LOOP_TASK_FILE`, `LOOP_TASK_FILE_REL`, `LOOP_QUEUE_ID`, `LOOP_RUN_ID`,
+`LOOP_ATTEMPT`, and `LOOP_MAX_ATTEMPTS`.
 Keep dispatcher commands local to the target workspace and do not put private
 machine paths into public package templates.
+
+Use `queue-peek` before changing a queue by hand. Use `queue-cancel` to move a
+queued task to `canceled/`, and `queue-requeue` to move a failed, active, or
+canceled task back to `inbox/`. `run-queue` uses a lease lock to prevent
+overlapping ticks and can move stale active tasks to `failed/` using
+`staleActiveMs`.
 
 Queue artifacts live under:
 
@@ -112,6 +144,7 @@ runtime/loops/<queue>/inbox/
 runtime/loops/<queue>/active/
 runtime/loops/<queue>/done/
 runtime/loops/<queue>/failed/
+runtime/loops/<queue>/canceled/
 runtime/loops/<queue>/runs/
 ```
 

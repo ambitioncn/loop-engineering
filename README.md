@@ -28,9 +28,13 @@ loop-engineering init --root /path/to/workspace
 loop-engineering verify --root /path/to/workspace
 loop-engineering run --root /path/to/workspace --config configs/loops/workspace-health.json
 loop-engineering status --root /path/to/workspace
+loop-engineering queue-init --queue agent-tasks
 loop-engineering enqueue --queue agent-tasks --title "Check logs" --task "Inspect the latest logs."
-loop-engineering run-queue --queue agent-tasks --dispatcher "node scripts/dispatch-task.mjs"
+loop-engineering run-queue --config configs/loops/queues/agent-tasks.json
 loop-engineering queue-status --queue agent-tasks
+loop-engineering queue-peek --queue agent-tasks
+loop-engineering queue-cancel --queue agent-tasks --task-id <id> --reason "not needed"
+loop-engineering queue-requeue --queue agent-tasks --task-id <id>
 ```
 
 Artifacts are written to:
@@ -57,6 +61,30 @@ you want non-zero loop exits to notify a channel.
 The queue runner is for explicit task handoffs. It does not route ordinary chat
 or simple commands by itself.
 
+Create a queue config:
+
+```bash
+loop-engineering queue-init --queue agent-tasks
+```
+
+That writes `configs/loops/queues/agent-tasks.json`:
+
+```json
+{
+  "queue": "agent-tasks",
+  "dispatcher": "node scripts/dispatch-task.mjs",
+  "preflightConfig": "configs/loops/workspace-health.json",
+  "timeoutMs": 1800000,
+  "leaseMs": 1860000,
+  "staleActiveMs": 3600000,
+  "retry": {
+    "maxAttempts": 1,
+    "retryDelayMs": 0,
+    "retryExitCodes": [1]
+  }
+}
+```
+
 ```bash
 loop-engineering enqueue \
   --queue agent-tasks \
@@ -68,10 +96,7 @@ Process one task:
 
 ```bash
 loop-engineering run-queue \
-  --queue agent-tasks \
-  --preflight-config configs/loops/workspace-health.json \
-  --dispatcher "node scripts/dispatch-task.mjs" \
-  --timeout-ms 1800000
+  --config configs/loops/queues/agent-tasks.json
 ```
 
 The dispatcher receives task details through environment variables:
@@ -84,7 +109,23 @@ LOOP_TASK_BODY
 LOOP_TASK_FILE
 LOOP_TASK_FILE_REL
 LOOP_RUN_ID
+LOOP_ATTEMPT
+LOOP_MAX_ATTEMPTS
 ```
+
+Operational commands:
+
+```bash
+loop-engineering queue-status --config configs/loops/queues/agent-tasks.json
+loop-engineering queue-peek --config configs/loops/queues/agent-tasks.json
+loop-engineering queue-cancel --config configs/loops/queues/agent-tasks.json --task-id <id>
+loop-engineering queue-requeue --config configs/loops/queues/agent-tasks.json --task-id <id>
+```
+
+`run-queue` uses a lease lock so overlapping cron ticks do not process the same
+task. `staleActiveMs` moves abandoned active tasks to `failed/` before the next
+task is processed. `retry.maxAttempts` retries dispatcher failures whose exit
+code is listed in `retry.retryExitCodes`.
 
 Queue artifacts live under:
 
@@ -93,6 +134,7 @@ runtime/loops/<queue>/inbox/*.json
 runtime/loops/<queue>/active/*.json
 runtime/loops/<queue>/done/*.json
 runtime/loops/<queue>/failed/*.json
+runtime/loops/<queue>/canceled/*.json
 runtime/loops/<queue>/runs/*.json
 ```
 

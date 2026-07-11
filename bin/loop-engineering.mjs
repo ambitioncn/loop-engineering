@@ -5,12 +5,18 @@ import {
   configFilesFromArgs,
   failureSignature,
   initWorkspace,
+  initQueueConfig,
   isoStamp,
   latestRun,
+  loadQueueConfig,
   loadSpec,
   loadState,
+  mergeQueueOptions,
   nextState,
   enqueueTask,
+  queueCancel,
+  queuePeek,
+  queueRequeue,
   queueStatus,
   runCheck,
   runQueueOnce,
@@ -32,7 +38,16 @@ function parseArgs(argv) {
     else if (a === '--dispatcher') args.dispatcher = argv[++i];
     else if (a === '--preflight-config') args.preflightConfig = argv[++i];
     else if (a === '--timeout-ms') args.timeoutMs = Number.parseInt(argv[++i], 10);
+    else if (a === '--lease-ms') args.leaseMs = Number.parseInt(argv[++i], 10);
+    else if (a === '--stale-active-ms') args.staleActiveMs = Number.parseInt(argv[++i], 10);
+    else if (a === '--max-attempts') args.maxAttempts = Number.parseInt(argv[++i], 10);
+    else if (a === '--retry-delay-ms') args.retryDelayMs = Number.parseInt(argv[++i], 10);
+    else if (a === '--retry-exit-codes') args.retryExitCodes = argv[++i].split(',').filter(Boolean).map((v) => Number.parseInt(v, 10));
+    else if (a === '--task-id') args.taskId = argv[++i];
+    else if (a === '--reason') args.reason = argv[++i];
+    else if (a === '--limit') args.limit = Number.parseInt(argv[++i], 10);
     else if (a === '--notify-command') args.notifyCommand = argv[++i];
+    else if (a === '--include-active') args.includeActive = true;
     else if (a === '--json') args.json = true;
     else if (a === '--force') args.force = true;
     else if (a === '--help' || a === '-h') args.help = true;
@@ -49,8 +64,13 @@ Usage:
   loop-engineering verify [--config configs/loops/name.json] [--root <workspace>]
   loop-engineering status [--config configs/loops/name.json] [--root <workspace>]
   loop-engineering enqueue --queue name --title "Title" (--task "Body" | --file task.md) [--root <workspace>]
+  loop-engineering run-queue --config configs/loops/queues/name.json [--root <workspace>]
   loop-engineering run-queue --queue name --dispatcher "command" [--preflight-config configs/loops/name.json] [--root <workspace>]
   loop-engineering queue-status --queue name [--root <workspace>] [--json]
+  loop-engineering queue-init --queue name [--root <workspace>] [--force]
+  loop-engineering queue-peek --queue name [--root <workspace>] [--json]
+  loop-engineering queue-cancel --queue name --task-id id [--reason "..."] [--root <workspace>]
+  loop-engineering queue-requeue --queue name --task-id id [--root <workspace>]
 
 Exit codes:
   0 success/report-only
@@ -194,6 +214,14 @@ async function initCommand(args) {
   return 0;
 }
 
+async function queueInitCommand(args) {
+  if (!args.queue) throw new Error('queue-init requires --queue.');
+  const config = await initQueueConfig(args.root, args.queue, { force: args.force });
+  console.log(`initialized queue ${args.queue} at ${args.root}`);
+  console.log(`config: ${config}`);
+  return 0;
+}
+
 async function enqueueCommand(args) {
   if (!args.queue) throw new Error('enqueue requires --queue.');
   const result = await enqueueTask(args.root, args);
@@ -206,10 +234,16 @@ async function enqueueCommand(args) {
 }
 
 async function runQueueCommand(args) {
-  if (!args.queue) throw new Error('run-queue requires --queue.');
-  const result = await runQueueOnce(args.root, args);
+  const config = await loadQueueConfig(args.root, args.config);
+  const options = mergeQueueOptions(config, {
+    ...args,
+    retry: buildRetryArgs(args, config.retry)
+  });
+  const result = await runQueueOnce(args.root, options);
   if (args.json) {
     console.log(JSON.stringify(result, null, 2));
+  } else if (result.status === 'locked') {
+    console.log(`${result.queue}: locked until ${result.lock?.expiresAt ?? 'unknown'}`);
   } else if (!result.processed) {
     console.log(`${result.queue}: no queued tasks`);
   } else {
@@ -221,8 +255,9 @@ async function runQueueCommand(args) {
 }
 
 async function queueStatusCommand(args) {
-  if (!args.queue) throw new Error('queue-status requires --queue.');
-  const result = await queueStatus(args.root, args.queue);
+  const config = await loadQueueConfig(args.root, args.config);
+  const options = mergeQueueOptions(config, args);
+  const result = await queueStatus(args.root, options.queue);
   if (args.json) {
     console.log(JSON.stringify(result, null, 2));
   } else {
@@ -234,6 +269,59 @@ async function queueStatusCommand(args) {
   return 0;
 }
 
+async function queuePeekCommand(args) {
+  const config = await loadQueueConfig(args.root, args.config);
+  const options = mergeQueueOptions(config, args);
+  const result = await queuePeek(args.root, options.queue, { limit: args.limit });
+  if (args.json) {
+    console.log(JSON.stringify(result, null, 2));
+  } else if (result.tasks.length === 0) {
+    console.log(`${result.queue}: no queued tasks`);
+  } else {
+    for (const task of result.tasks) {
+      console.log(`${task.id} ${task.title}`);
+      console.log(`  attempts: ${task.attempts}`);
+      console.log(`  file: ${task.file}`);
+    }
+  }
+  return 0;
+}
+
+async function queueCancelCommand(args) {
+  if (!args.taskId) throw new Error('queue-cancel requires --task-id.');
+  const config = await loadQueueConfig(args.root, args.config);
+  const options = mergeQueueOptions(config, args);
+  const result = await queueCancel(args.root, options.queue, args.taskId, {
+    reason: args.reason,
+    includeActive: args.includeActive
+  });
+  if (args.json) console.log(JSON.stringify(result, null, 2));
+  else console.log(`canceled ${result.taskId}: ${result.file}`);
+  return 0;
+}
+
+async function queueRequeueCommand(args) {
+  if (!args.taskId) throw new Error('queue-requeue requires --task-id.');
+  const config = await loadQueueConfig(args.root, args.config);
+  const options = mergeQueueOptions(config, args);
+  const result = await queueRequeue(args.root, options.queue, args.taskId);
+  if (args.json) console.log(JSON.stringify(result, null, 2));
+  else console.log(`requeued ${result.taskId}: ${result.file}`);
+  return 0;
+}
+
+function buildRetryArgs(args, existing) {
+  if (args.maxAttempts === undefined && args.retryDelayMs === undefined && args.retryExitCodes === undefined) {
+    return existing;
+  }
+  return {
+    ...(existing ?? {}),
+    ...(args.maxAttempts !== undefined ? { maxAttempts: args.maxAttempts } : {}),
+    ...(args.retryDelayMs !== undefined ? { retryDelayMs: args.retryDelayMs } : {}),
+    ...(args.retryExitCodes !== undefined ? { retryExitCodes: args.retryExitCodes } : {})
+  };
+}
+
 async function main() {
   const args = parseArgs(process.argv.slice(2));
   const command = args._[0];
@@ -242,12 +330,16 @@ async function main() {
     return args.help ? 0 : 1;
   }
   if (command === 'init') return initCommand(args);
+  if (command === 'queue-init') return queueInitCommand(args);
   if (command === 'run') return runCommand(args);
   if (command === 'verify') return verifyCommand(args);
   if (command === 'status') return statusCommand(args);
   if (command === 'enqueue') return enqueueCommand(args);
   if (command === 'run-queue') return runQueueCommand(args);
   if (command === 'queue-status') return queueStatusCommand(args);
+  if (command === 'queue-peek') return queuePeekCommand(args);
+  if (command === 'queue-cancel') return queueCancelCommand(args);
+  if (command === 'queue-requeue') return queueRequeueCommand(args);
   throw new Error(`Unknown command: ${command}`);
 }
 
