@@ -1,0 +1,35 @@
+{
+  "id": "workspace-health",
+  "goal": "Keep this workspace loop-ready and detect obvious drift.",
+  "level": "L1",
+  "mode": "report-only",
+  "maxRuntimeMs": 120000,
+  "description": "A safe first loop: local read-only checks plus durable run ledger.",
+  "humanGates": [
+    "source edits",
+    "external messages",
+    "destructive commands",
+    "production config changes"
+  ],
+  "breaker": {
+    "maxConsecutiveFailures": 3,
+    "sameFailureThreshold": 2
+  },
+  "checks": [
+    {
+      "id": "git-status",
+      "type": "command",
+      "cmd": "git status --short",
+      "expectExitCode": 0,
+      "timeoutMs": 10000,
+      "allowNonEmptyOutput": true
+    },
+    {
+      "id": "loop-config-dir",
+      "type": "files",
+      "paths": [
+        "configs/loops"
+      ]
+    }
+  ]
+}

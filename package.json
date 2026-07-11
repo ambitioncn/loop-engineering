@@ -1,0 +1,44 @@
+{
+  "name": "agent-loop-engineering",
+  "version": "0.1.0",
+  "private": false,
+  "description": "OpenClaw-native loop engineering CLI, templates, and skill for verifiable agent work loops.",
+  "type": "module",
+  "bin": {
+    "loop-engineering": "bin/loop-engineering.mjs",
+    "agent-loop": "bin/loop-engineering.mjs",
+    "run-loop-cron.sh": "scripts/run-loop-cron.sh"
+  },
+  "scripts": {
+    "check": "node --check bin/loop-engineering.mjs && node --check lib/core.mjs && node bin/loop-engineering.mjs verify --config templates/workspace-health.json --root .",
+    "pack:dry": "npm pack --dry-run"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "files": [
+    "README.md",
+    "bin/",
+    "lib/",
+    "scripts/",
+    "templates/",
+    "skills/loop-engineering/"
+  ],
+  "keywords": [
+    "openclaw",
+    "agent",
+    "loop-engineering",
+    "automation",
+    "cron",
+    "health-check"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ambitioncn/loop-engineering.git"
+  },
+  "bugs": {
+    "url": "https://github.com/ambitioncn/loop-engineering/issues"
+  },
+  "homepage": "https://github.com/ambitioncn/loop-engineering#readme",
+  "license": "UNLICENSED"
+}
