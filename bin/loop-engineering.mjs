@@ -10,7 +10,10 @@ import {
   loadSpec,
   loadState,
   nextState,
+  enqueueTask,
+  queueStatus,
   runCheck,
+  runQueueOnce,
   runsDirFor,
   statePathFor,
   writeJson
@@ -22,6 +25,14 @@ function parseArgs(argv) {
     const a = argv[i];
     if (a === '--root') args.root = path.resolve(argv[++i]);
     else if (a === '--config') args.config = argv[++i];
+    else if (a === '--queue') args.queue = argv[++i];
+    else if (a === '--title') args.title = argv[++i];
+    else if (a === '--task') args.task = argv[++i];
+    else if (a === '--file') args.file = argv[++i];
+    else if (a === '--dispatcher') args.dispatcher = argv[++i];
+    else if (a === '--preflight-config') args.preflightConfig = argv[++i];
+    else if (a === '--timeout-ms') args.timeoutMs = Number.parseInt(argv[++i], 10);
+    else if (a === '--notify-command') args.notifyCommand = argv[++i];
     else if (a === '--json') args.json = true;
     else if (a === '--force') args.force = true;
     else if (a === '--help' || a === '-h') args.help = true;
@@ -37,6 +48,9 @@ Usage:
   loop-engineering run --config configs/loops/name.json [--root <workspace>] [--json]
   loop-engineering verify [--config configs/loops/name.json] [--root <workspace>]
   loop-engineering status [--config configs/loops/name.json] [--root <workspace>]
+  loop-engineering enqueue --queue name --title "Title" (--task "Body" | --file task.md) [--root <workspace>]
+  loop-engineering run-queue --queue name --dispatcher "command" [--preflight-config configs/loops/name.json] [--root <workspace>]
+  loop-engineering queue-status --queue name [--root <workspace>] [--json]
 
 Exit codes:
   0 success/report-only
@@ -180,6 +194,46 @@ async function initCommand(args) {
   return 0;
 }
 
+async function enqueueCommand(args) {
+  if (!args.queue) throw new Error('enqueue requires --queue.');
+  const result = await enqueueTask(args.root, args);
+  if (args.json) {
+    console.log(JSON.stringify(result, null, 2));
+  } else {
+    console.log(`queued: ${result.file}`);
+  }
+  return 0;
+}
+
+async function runQueueCommand(args) {
+  if (!args.queue) throw new Error('run-queue requires --queue.');
+  const result = await runQueueOnce(args.root, args);
+  if (args.json) {
+    console.log(JSON.stringify(result, null, 2));
+  } else if (!result.processed) {
+    console.log(`${result.queue}: no queued tasks`);
+  } else {
+    console.log(`${result.queue}: ${result.status}`);
+    console.log(`task: ${result.taskPath}`);
+    console.log(`run: ${result.runPath}`);
+  }
+  return result.exitCode;
+}
+
+async function queueStatusCommand(args) {
+  if (!args.queue) throw new Error('queue-status requires --queue.');
+  const result = await queueStatus(args.root, args.queue);
+  if (args.json) {
+    console.log(JSON.stringify(result, null, 2));
+  } else {
+    console.log(result.queue);
+    for (const [key, value] of Object.entries(result)) {
+      if (key !== 'queue') console.log(`  ${key}: ${value}`);
+    }
+  }
+  return 0;
+}
+
 async function main() {
   const args = parseArgs(process.argv.slice(2));
   const command = args._[0];
@@ -191,6 +245,9 @@ async function main() {
   if (command === 'run') return runCommand(args);
   if (command === 'verify') return verifyCommand(args);
   if (command === 'status') return statusCommand(args);
+  if (command === 'enqueue') return enqueueCommand(args);
+  if (command === 'run-queue') return runQueueCommand(args);
+  if (command === 'queue-status') return queueStatusCommand(args);
   throw new Error(`Unknown command: ${command}`);
 }
 

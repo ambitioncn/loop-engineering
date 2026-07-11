@@ -4,15 +4,8 @@ OpenClaw-native loop engineering for repeated agent work. It provides a small
 Node CLI that executes JSON loop specs, records append-only run artifacts, and
 uses a circuit breaker to escalate repeated failures.
 
-The core idea is deliberately simple:
-
-```text
-Trigger -> Load state -> Check -> Verify -> Record -> Stop or schedule next run
-```
-
-The first release is conservative by design. It is best suited for report-only
-health checks, repeatable preflights, and cron-driven monitoring where every run
-should leave a small local artifact.
+It also includes a small durable task queue runner for explicit loop-managed
+work handoffs.
 
 ## Install
 
@@ -35,6 +28,9 @@ loop-engineering init --root /path/to/workspace
 loop-engineering verify --root /path/to/workspace
 loop-engineering run --root /path/to/workspace --config configs/loops/workspace-health.json
 loop-engineering status --root /path/to/workspace
+loop-engineering enqueue --queue agent-tasks --title "Check logs" --task "Inspect the latest logs."
+loop-engineering run-queue --queue agent-tasks --dispatcher "node scripts/dispatch-task.mjs"
+loop-engineering queue-status --queue agent-tasks
 ```
 
 Artifacts are written to:
@@ -43,39 +39,6 @@ Artifacts are written to:
 runtime/loops/<loop_id>/state.json
 runtime/loops/<loop_id>/runs/*.json
 ```
-
-## Loop Specs
-
-Loop specs are JSON files. A minimal report-only spec looks like this:
-
-```json
-{
-  "id": "workspace-health",
-  "goal": "Keep this workspace loop-ready and detect obvious drift.",
-  "level": "L1",
-  "mode": "report-only",
-  "maxRuntimeMs": 120000,
-  "breaker": {
-    "maxConsecutiveFailures": 3,
-    "sameFailureThreshold": 2
-  },
-  "checks": [
-    {
-      "id": "git-status",
-      "type": "command",
-      "cmd": "git status --short",
-      "expectExitCode": 0,
-      "timeoutMs": 10000,
-      "allowNonEmptyOutput": true
-    }
-  ]
-}
-```
-
-Supported check types:
-
-- `files`: asserts that relative paths exist.
-- `command`: runs a shell command and compares its exit code.
 
 ## Cron Wrapper
 
@@ -89,6 +52,50 @@ LOOP_WORKDIR=/path/to/workspace \
 Set `LOOP_ALERT_COMMAND` to a command that accepts one message argument when
 you want non-zero loop exits to notify a channel.
 
+## Queue Runner
+
+The queue runner is for explicit task handoffs. It does not route ordinary chat
+or simple commands by itself.
+
+```bash
+loop-engineering enqueue \
+  --queue agent-tasks \
+  --title "Check target app logs" \
+  --task "Inspect the latest logs and summarize blockers."
+```
+
+Process one task:
+
+```bash
+loop-engineering run-queue \
+  --queue agent-tasks \
+  --preflight-config configs/loops/workspace-health.json \
+  --dispatcher "node scripts/dispatch-task.mjs" \
+  --timeout-ms 1800000
+```
+
+The dispatcher receives task details through environment variables:
+
+```text
+LOOP_QUEUE_ID
+LOOP_TASK_ID
+LOOP_TASK_TITLE
+LOOP_TASK_BODY
+LOOP_TASK_FILE
+LOOP_TASK_FILE_REL
+LOOP_RUN_ID
+```
+
+Queue artifacts live under:
+
+```text
+runtime/loops/<queue>/inbox/*.json
+runtime/loops/<queue>/active/*.json
+runtime/loops/<queue>/done/*.json
+runtime/loops/<queue>/failed/*.json
+runtime/loops/<queue>/runs/*.json
+```
+
 ## Skill
 
 The bundled skill is in `skills/loop-engineering/SKILL.md`. Install it from
@@ -100,24 +107,3 @@ ClawHub:
 ```text
 https://clawhub.ai/ambitioncn/skills/loop-engineering
 ```
-
-## Repository Layout
-
-```text
-bin/                         CLI entrypoint
-lib/                         runner, validation, state, and artifact logic
-scripts/run-loop-cron.sh      cron-friendly wrapper
-templates/workspace-health.json
-skills/loop-engineering/      bundled OpenClaw/Codex skill
-docs/                         architecture notes
-examples/                     copyable starter specs
-```
-
-## Safety Model
-
-- `L1` is report-only: run checks and write local artifacts.
-- `L2` and `L3` are reserved for stronger future gates.
-- External writes, publishing, destructive commands, credential changes, and
-  production config edits should remain separately confirmed by the operator.
-
-See `docs/architecture.md` for the longer design notes.

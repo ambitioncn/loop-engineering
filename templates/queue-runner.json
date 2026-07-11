@@ -1,0 +1,27 @@
+{
+  "id": "queue-runner",
+  "goal": "Keep the generic loop task queue runnable and visible.",
+  "level": "L1",
+  "mode": "report-only",
+  "maxRuntimeMs": 120000,
+  "description": "A starter verification loop for a queue-driven workflow.",
+  "humanGates": [
+    "dispatcher command changes",
+    "external sends",
+    "destructive commands",
+    "production config changes"
+  ],
+  "breaker": {
+    "maxConsecutiveFailures": 3,
+    "sameFailureThreshold": 2
+  },
+  "checks": [
+    {
+      "id": "queue-status",
+      "type": "command",
+      "cmd": "loop-engineering queue-status --queue agent-tasks --json >/dev/null",
+      "expectExitCode": 0,
+      "timeoutMs": 10000
+    }
+  ]
+}

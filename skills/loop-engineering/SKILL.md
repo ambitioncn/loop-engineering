@@ -27,6 +27,9 @@ Prefer the npm CLI when installed:
 loop-engineering verify --root /path/to/workspace
 loop-engineering run --root /path/to/workspace --config configs/loops/<id>.json
 loop-engineering status --root /path/to/workspace
+loop-engineering enqueue --root /path/to/workspace --queue <queue> --title "Title" --task "Task body"
+loop-engineering run-queue --root /path/to/workspace --queue <queue> --dispatcher "command"
+loop-engineering queue-status --root /path/to/workspace --queue <queue>
 ```
 
 If the package is not installed but exists in the workspace, use:
@@ -76,13 +79,49 @@ Supported check types:
 - `files`: assert relative paths exist.
 - `command`: run a shell command and compare its exit code.
 
+## Queue Runner
+
+Use queue commands only for explicit loop-managed handoffs, not ordinary chat.
+
+```bash
+loop-engineering enqueue \
+  --root /path/to/workspace \
+  --queue agent-tasks \
+  --title "Check target app logs" \
+  --task "Inspect the latest logs and summarize blockers."
+```
+
+```bash
+loop-engineering run-queue \
+  --root /path/to/workspace \
+  --queue agent-tasks \
+  --preflight-config configs/loops/workspace-health.json \
+  --dispatcher "node scripts/dispatch-task.mjs" \
+  --timeout-ms 1800000
+```
+
+The dispatcher receives `LOOP_TASK_ID`, `LOOP_TASK_TITLE`, `LOOP_TASK_BODY`,
+`LOOP_TASK_FILE`, `LOOP_TASK_FILE_REL`, `LOOP_QUEUE_ID`, and `LOOP_RUN_ID`.
+Keep dispatcher commands local to the target workspace and do not put private
+machine paths into public package templates.
+
+Queue artifacts live under:
+
+```text
+runtime/loops/<queue>/inbox/
+runtime/loops/<queue>/active/
+runtime/loops/<queue>/done/
+runtime/loops/<queue>/failed/
+runtime/loops/<queue>/runs/
+```
+
 ## Operating Flow
 
 1. Read the existing loop docs and configs in the target workspace.
-2. Add or edit the smallest `configs/loops/<id>.json` needed.
-3. Run `loop-engineering verify --config ...`.
-4. Run one manual tick with `loop-engineering run --config ...`.
-5. Inspect `runtime/loops/<id>/runs/*.json` before summarizing.
+2. Add or edit the smallest `configs/loops/<id>.json` or queue dispatcher needed.
+3. Run `loop-engineering verify --config ...` for loop specs.
+4. Run one manual tick with `loop-engineering run --config ...` or `loop-engineering run-queue ...`.
+5. Inspect `runtime/loops/<id>/runs/*.json` or `runtime/loops/<queue>/runs/*.json` before summarizing.
 6. Add cron only after a manual run succeeds.
 
 ## Cron
