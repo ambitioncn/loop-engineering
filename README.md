@@ -5,7 +5,8 @@ Node CLI that executes JSON loop specs, records append-only run artifacts, and
 uses a circuit breaker to escalate repeated failures.
 
 It also includes a small durable task queue runner for explicit loop-managed
-work handoffs.
+work handoffs, plus an assisted code queue mode that runs each task in an
+isolated git worktree.
 
 ## Install
 
@@ -31,6 +32,7 @@ loop-engineering status --root /path/to/workspace
 loop-engineering doctor --root /path/to/workspace
 loop-engineering summarize --root /path/to/workspace --limit 20
 loop-engineering queue-init --queue agent-tasks
+loop-engineering code-queue-init --queue code-tasks
 loop-engineering enqueue --queue agent-tasks --title "Check logs" --task "Inspect the latest logs."
 loop-engineering run-queue --config configs/loops/queues/agent-tasks.json
 loop-engineering queue-status --queue agent-tasks
@@ -165,6 +167,50 @@ runtime/loops/<queue>/failed/*.json
 runtime/loops/<queue>/canceled/*.json
 runtime/loops/<queue>/runs/*.json
 ```
+
+## Assisted Code Worktrees
+
+`v0.3.0` adds L2 assisted code queues. A code queue still uses `enqueue` and
+`run-queue`, but the runner creates a git worktree and branch for the task,
+runs the dispatcher inside that worktree, then runs configured verification
+commands. It records the branch, worktree path, verification results, `git
+status --short`, `git diff --stat`, and `git diff --name-status` in the run
+artifact, plus untracked file names.
+
+Create a starter config:
+
+```bash
+loop-engineering code-queue-init --queue code-tasks
+```
+
+That writes `configs/loops/queues/code-tasks.json` with:
+
+```json
+{
+  "queue": "code-tasks",
+  "dispatcher": "node scripts/dispatch-code-task.mjs",
+  "preflightConfig": "configs/loops/workspace-health.json",
+  "worktree": {
+    "enabled": true,
+    "baseDir": "runtime/loops/code-tasks/worktrees",
+    "branchPrefix": "loop/code-tasks",
+    "verifyCommands": ["npm test"],
+    "keepOnSuccess": true
+  }
+}
+```
+
+The dispatcher receives the normal queue environment variables plus:
+
+```text
+LOOP_ROOT
+LOOP_WORKTREE_PATH
+LOOP_WORKTREE_PATH_REL
+LOOP_WORKTREE_BRANCH
+```
+
+The runner deliberately does not push, merge, or delete worktrees. Treat the
+artifact as a prepared patch workspace for review.
 
 ## Skill
 

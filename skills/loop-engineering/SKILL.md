@@ -36,6 +36,7 @@ loop-engineering queue-status --root /path/to/workspace --queue <queue>
 loop-engineering queue-peek --root /path/to/workspace --queue <queue>
 loop-engineering queue-cancel --root /path/to/workspace --queue <queue> --task-id <id>
 loop-engineering queue-requeue --root /path/to/workspace --queue <queue> --task-id <id>
+loop-engineering code-queue-init --root /path/to/workspace --queue <queue>
 ```
 
 If the package is not installed but exists in the workspace, use:
@@ -175,6 +176,41 @@ runtime/loops/<queue>/failed/
 runtime/loops/<queue>/canceled/
 runtime/loops/<queue>/runs/
 ```
+
+## Assisted Code Worktrees
+
+Use code worktree queues only for explicit L2 code-changing tasks, and keep
+human review in the loop. The runner prepares local changes; it does not push,
+merge, or delete worktrees.
+
+Create a starter config:
+
+```bash
+loop-engineering code-queue-init --root /path/to/workspace --queue code-tasks
+```
+
+The generated queue config enables:
+
+```json
+{
+  "worktree": {
+    "enabled": true,
+    "baseDir": "runtime/loops/code-tasks/worktrees",
+    "branchPrefix": "loop/code-tasks",
+    "verifyCommands": ["npm test"],
+    "keepOnSuccess": true
+  }
+}
+```
+
+When `worktree.enabled` is true, `run-queue` creates a git worktree and branch
+for the task, runs the dispatcher with cwd set to that worktree, runs
+`verifyCommands`, then records the branch, worktree path, verification results,
+`git status --short`, `git diff --stat`, and `git diff --name-status` in the
+run artifact, plus untracked file names.
+
+The dispatcher receives the normal queue environment plus `LOOP_ROOT`,
+`LOOP_WORKTREE_PATH`, `LOOP_WORKTREE_PATH_REL`, and `LOOP_WORKTREE_BRANCH`.
 
 ## Operating Flow
 

@@ -15,23 +15,26 @@ and Codex-style agents:
 - command and file checks
 - circuit breaker for repeated failures
 - generic queue runner for explicit task handoffs
+- assisted code queues that isolate edits in git worktrees
 - cron wrapper that stays silent on success and surfaces non-zero exits
 - bundled skill that teaches agents when to use the loop workflow
 
 ## Levels
 
 - `L1`: report-only. May run read-only checks and write local run artifacts.
-- `L2`: assisted action. Intended for future isolated worktree edits.
+- `L2`: assisted action. May prepare local changes in isolated worktrees,
+  run verification, and leave artifacts for human review.
 - `L3`: unattended-capable. Intended for future explicit allowlists,
   verification budgets, human gates, and proven run history.
 
-The current loop-spec runner is designed around `L1`. Specs may declare higher
-levels for planning, but stronger action policies should be implemented outside
-this v0 runner until appropriate gates exist.
+The loop-spec runner remains designed around `L1`. The queue runner supports a
+bounded `L2` mode through `worktree.enabled`: it creates local worktrees and
+records evidence, but it does not push, merge, delete worktrees, or perform
+external writes.
 
 ## Queue Runner
 
-`v0.2.0` adds a durable queue for explicit loop-managed task handoffs:
+`v0.2.0` added a durable queue for explicit loop-managed task handoffs:
 
 ```bash
 loop-engineering enqueue \
@@ -53,6 +56,28 @@ through environment variables such as `LOOP_TASK_BODY`, `LOOP_TASK_FILE`, and
 `LOOP_RUN_ID`, so each workspace can decide how to hand off work without baking
 private machine paths or credentials into public templates.
 
+## Code Worktree Queue
+
+`v0.3.0` adds assisted code queues:
+
+```bash
+loop-engineering code-queue-init --queue code-tasks
+loop-engineering enqueue --queue code-tasks --title "Fix parser" --task "Patch the parser and run tests."
+loop-engineering run-queue --config configs/loops/queues/code-tasks.json
+```
+
+When `worktree.enabled` is true, the runner:
+
+1. Runs the optional preflight loop in the main workspace.
+2. Creates `git worktree add -b <branch> <path> HEAD`.
+3. Runs the dispatcher with cwd set to the worktree.
+4. Runs configured `verifyCommands`.
+5. Records branch, worktree path, verification results, git status, diff
+   summaries, and untracked files in the run artifact.
+
+This keeps code-changing work reviewable without giving the loop authority to
+ship changes.
+
 ## Artifacts
 
 Loop specs store state and runs under the target workspace:
@@ -69,7 +94,9 @@ runtime/loops/<queue>/inbox/
 runtime/loops/<queue>/active/
 runtime/loops/<queue>/done/
 runtime/loops/<queue>/failed/
+runtime/loops/<queue>/canceled/
 runtime/loops/<queue>/runs/
+runtime/loops/<queue>/worktrees/
 ```
 
 Run artifacts are meant to be compact evidence, not raw logs. Long-term memory

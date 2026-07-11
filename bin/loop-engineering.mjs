@@ -4,6 +4,7 @@ import {
   applyBreaker,
   configFilesFromArgs,
   doctorReport,
+  initCodeQueueConfig,
   failureSignature,
   initWorkspace,
   initQueueConfig,
@@ -73,6 +74,7 @@ Usage:
   loop-engineering run-queue --queue name --dispatcher "command" [--preflight-config configs/loops/name.json] [--root <workspace>]
   loop-engineering queue-status --queue name [--root <workspace>] [--json]
   loop-engineering queue-init --queue name [--root <workspace>] [--force]
+  loop-engineering code-queue-init --queue name [--root <workspace>] [--force]
   loop-engineering queue-peek --queue name [--root <workspace>] [--json]
   loop-engineering queue-cancel --queue name --task-id id [--reason "..."] [--root <workspace>]
   loop-engineering queue-requeue --queue name --task-id id [--root <workspace>]
@@ -275,6 +277,14 @@ async function queueInitCommand(args) {
   return 0;
 }
 
+async function codeQueueInitCommand(args) {
+  if (!args.queue) throw new Error('code-queue-init requires --queue.');
+  const config = await initCodeQueueConfig(args.root, args.queue, { force: args.force });
+  console.log(`initialized code worktree queue ${args.queue} at ${args.root}`);
+  console.log(`config: ${config}`);
+  return 0;
+}
+
 async function enqueueCommand(args) {
   if (!args.queue) throw new Error('enqueue requires --queue.');
   const result = await enqueueTask(args.root, args);
@@ -384,6 +394,7 @@ async function main() {
   }
   if (command === 'init') return initCommand(args);
   if (command === 'queue-init') return queueInitCommand(args);
+  if (command === 'code-queue-init') return codeQueueInitCommand(args);
   if (command === 'run') return runCommand(args);
   if (command === 'verify') return verifyCommand(args);
   if (command === 'status') return statusCommand(args);

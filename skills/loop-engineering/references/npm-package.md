@@ -1,7 +1,7 @@
 # npm Package
 
 Package name: `agent-loop-engineering`
-Version: `0.2.2`
+Version: `0.3.0`
 
 Install from npm:
 
@@ -20,6 +20,7 @@ loop-engineering doctor --root /path/to/workspace
 loop-engineering summarize --root /path/to/workspace --limit 20
 loop-engineering enqueue --root /path/to/workspace --queue <queue> --title "Title" --task "Task body"
 loop-engineering queue-init --root /path/to/workspace --queue <queue>
+loop-engineering code-queue-init --root /path/to/workspace --queue <queue>
 loop-engineering run-queue --root /path/to/workspace --config configs/loops/queues/<queue>.json
 loop-engineering queue-status --root /path/to/workspace --queue <queue>
 loop-engineering queue-peek --root /path/to/workspace --queue <queue>
@@ -28,6 +29,11 @@ loop-engineering queue-requeue --root /path/to/workspace --queue <queue> --task-
 agent-loop status --root /path/to/workspace
 LOOP_WORKDIR=/path/to/workspace run-loop-cron.sh configs/loops/<id>.json
 ```
+
+`code-queue-init` creates an L2 assisted code queue config. Each task runs in
+an isolated git worktree and branch, then runs configured verification commands
+and records diff/status summaries. It does not push, merge, or delete
+worktrees.
 
 The package contains `bin/`, `lib/`, `scripts/`, `templates/`, and
 `skills/loop-engineering/`.

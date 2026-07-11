@@ -1,0 +1,25 @@
+{
+  "queue": "code-tasks",
+  "description": "L2 assisted code task queue. Each task runs in an isolated git worktree and records verification plus diff summaries. It never pushes, merges, or deletes worktrees.",
+  "dispatcher": "node scripts/dispatch-code-task.mjs",
+  "preflightConfig": "configs/loops/workspace-health.json",
+  "timeoutMs": 1800000,
+  "leaseMs": 1860000,
+  "staleActiveMs": 3600000,
+  "retry": {
+    "maxAttempts": 1,
+    "retryDelayMs": 0,
+    "retryExitCodes": [
+      1
+    ]
+  },
+  "worktree": {
+    "enabled": true,
+    "baseDir": "runtime/loops/code-tasks/worktrees",
+    "branchPrefix": "loop/code-tasks",
+    "verifyCommands": [
+      "npm test"
+    ],
+    "keepOnSuccess": true
+  }
+}
