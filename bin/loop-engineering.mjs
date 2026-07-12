@@ -12,6 +12,7 @@ import {
   codePatchApplyPlan,
   codePatchVerify,
   codeReviewBundle,
+  codeTaskCloseout,
   configFilesFromArgs,
   doctorReport,
   initCodeQueueConfig,
@@ -103,6 +104,7 @@ Usage:
   loop-engineering code-patch-apply-plan --patch runtime/loops/code-tasks/patches/task.patch [--root <workspace>] [--allow-dirty] [--json]
   loop-engineering code-patch-apply --patch runtime/loops/code-tasks/patches/task.patch --confirm-apply [--root <workspace>] [--allow-dirty] [--json]
   loop-engineering code-review-bundle --queue name [--task-id id | --run-id id] [--output review.md] [--force] [--root <workspace>] [--json]
+  loop-engineering code-task-closeout --queue name [--task-id id | --run-id id] [--output closeout.md] [--force] [--root <workspace>] [--json]
   loop-engineering code-worktree-cleanup-plan --queue name [--limit 50] [--root <workspace>] [--json]
   loop-engineering code-worktree-cleanup --queue name --confirm-cleanup [--limit 50] [--include-orphans] [--root <workspace>] [--json]
 
@@ -591,6 +593,42 @@ async function codeReviewBundleCommand(args) {
   return 0;
 }
 
+async function codeTaskCloseoutCommand(args) {
+  const config = await loadQueueConfig(args.root, args.config);
+  const options = mergeQueueOptions(config, args);
+  const result = await codeTaskCloseout(args.root, options.queue, {
+    config: options,
+    taskId: args.taskId,
+    runId: args.runId,
+    limit: args.limit,
+    output: args.output,
+    force: args.force,
+    timeoutMs: args.timeoutMs,
+    allowDirty: args.allowDirty
+  });
+  if (args.json) {
+    const { markdown: _markdown, ...json } = result;
+    console.log(JSON.stringify(json, null, 2));
+  } else {
+    console.log(`${result.closeoutStatus} ${result.taskId ?? result.runId}`);
+    console.log(`  closeout: ${result.closeoutFile}`);
+    console.log(`  json: ${result.jsonFile}`);
+    console.log(`  review: ${result.review.exists ? 'exists' : 'missing'} ${result.review.reviewFile}`);
+    console.log(`  patch: ${result.patchExport.exists ? 'exists' : 'missing'} ${result.patchExport.patchFile}`);
+    console.log(`  worktree: ${result.worktreeState.exists ? 'exists' : 'missing'} ${result.worktreeState.path ?? 'none'}`);
+    console.log(`  cleanup: ${result.cleanup.recommendation ?? 'unknown'}`);
+    if (result.actions.length > 0) {
+      console.log('  next actions:');
+      for (const action of result.actions) console.log(`    - ${action}`);
+    }
+    if (result.errors.length > 0) {
+      console.log(`  errors: ${result.errors.length}`);
+      for (const error of result.errors) console.log(`    ${error.step}: ${error.message}`);
+    }
+  }
+  return 0;
+}
+
 async function codeWorktreeCleanupPlanCommand(args) {
   const config = await loadQueueConfig(args.root, args.config);
   const options = mergeQueueOptions(config, args);
@@ -701,6 +739,7 @@ async function main() {
   if (command === 'code-patch-apply-plan') return codePatchApplyPlanCommand(args);
   if (command === 'code-patch-apply') return codePatchApplyCommand(args);
   if (command === 'code-review-bundle') return codeReviewBundleCommand(args);
+  if (command === 'code-task-closeout') return codeTaskCloseoutCommand(args);
   if (command === 'code-worktree-cleanup-plan') return codeWorktreeCleanupPlanCommand(args);
   if (command === 'code-worktree-cleanup') return codeWorktreeCleanupCommand(args);
   throw new Error(`Unknown command: ${command}`);

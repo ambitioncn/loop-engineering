@@ -47,6 +47,7 @@ loop-engineering code-patch-verify --patch runtime/loops/code-tasks/patches/<id>
 loop-engineering code-patch-apply-plan --patch runtime/loops/code-tasks/patches/<id>.patch
 loop-engineering code-patch-apply --patch runtime/loops/code-tasks/patches/<id>.patch --confirm-apply
 loop-engineering code-review-bundle --queue code-tasks --task-id <id>
+loop-engineering code-task-closeout --queue code-tasks --task-id <id>
 loop-engineering code-worktree-cleanup-plan --queue code-tasks
 loop-engineering code-worktree-cleanup --queue code-tasks --confirm-cleanup
 ```
@@ -325,6 +326,20 @@ successful `code-patch-verify`, and an existing review bundle Markdown plus
 JSON sidecar. Orphan worktree directories are skipped unless `--include-orphans`
 is supplied. The command does not stage, commit, push, merge, delete branches,
 or change queue state.
+
+`v0.3.9` adds closeout artifacts:
+
+```bash
+loop-engineering code-task-closeout --queue code-tasks --task-id <taskId>
+loop-engineering code-task-closeout --queue code-tasks --run-id <runId> --output closeout.md --json
+```
+
+It writes `runtime/loops/<queue>/closeouts/<taskId>.md` plus a `.json` sidecar
+by default. The closeout gathers run identity, verification, current worktree
+state when present, patch export/verify/apply-plan status, review bundle
+presence, cleanup recommendation, and remaining next actions. It refuses to
+overwrite unless `--force` is set and does not apply patches, remove worktrees,
+stage, commit, push, merge, delete branches, or change queue state.
 
 ## Skill
 

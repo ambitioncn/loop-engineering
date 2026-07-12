@@ -45,6 +45,7 @@ loop-engineering code-patch-verify --root /path/to/workspace --patch runtime/loo
 loop-engineering code-patch-apply-plan --root /path/to/workspace --patch runtime/loops/<queue>/patches/<id>.patch
 loop-engineering code-patch-apply --root /path/to/workspace --patch runtime/loops/<queue>/patches/<id>.patch --confirm-apply
 loop-engineering code-review-bundle --root /path/to/workspace --queue <queue> --task-id <id>
+loop-engineering code-task-closeout --root /path/to/workspace --queue <queue> --task-id <id>
 loop-engineering code-worktree-cleanup-plan --root /path/to/workspace --queue <queue>
 loop-engineering code-worktree-cleanup --root /path/to/workspace --queue <queue> --confirm-cleanup
 ```
@@ -238,6 +239,8 @@ loop-engineering code-patch-apply-plan --root /path/to/workspace --patch review.
 loop-engineering code-patch-apply --root /path/to/workspace --patch review.patch --confirm-apply
 loop-engineering code-review-bundle --root /path/to/workspace --queue code-tasks --task-id <id>
 loop-engineering code-review-bundle --root /path/to/workspace --queue code-tasks --run-id <id> --output review.md --json
+loop-engineering code-task-closeout --root /path/to/workspace --queue code-tasks --task-id <id>
+loop-engineering code-task-closeout --root /path/to/workspace --queue code-tasks --run-id <id> --output closeout.md --json
 loop-engineering code-worktree-cleanup-plan --root /path/to/workspace --queue code-tasks
 loop-engineering code-worktree-cleanup-plan --root /path/to/workspace --queue code-tasks --json
 loop-engineering code-worktree-cleanup --root /path/to/workspace --queue code-tasks --confirm-cleanup
@@ -265,7 +268,10 @@ and removes only gated candidates with `git worktree remove`. Dirty worktrees
 must have a default exported patch, passing patch verification, and an existing
 review bundle Markdown plus JSON sidecar. Orphan worktrees are skipped unless
 `--include-orphans` is supplied. `doctor` reports the same code queue findings
-as warnings. Planning commands do not remove worktrees; cleanup does not
+as warnings. `code-task-closeout` writes a Markdown closeout artifact plus JSON
+sidecar with task/run identity, verification, patch export/verify/apply-plan
+status, review presence, cleanup recommendation, and remaining next actions.
+Planning and closeout commands do not remove worktrees; cleanup does not
 checkout, stage, commit, push, merge, delete branches, or change queue state.
 
 ## Operating Flow

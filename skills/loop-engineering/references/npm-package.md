@@ -1,7 +1,7 @@
 # npm Package
 
 Package name: `agent-loop-engineering`
-Version: `0.3.8`
+Version: `0.3.9`
 
 Install from npm:
 
@@ -34,6 +34,7 @@ loop-engineering code-patch-verify --root /path/to/workspace --patch runtime/loo
 loop-engineering code-patch-apply-plan --root /path/to/workspace --patch runtime/loops/<queue>/patches/<id>.patch
 loop-engineering code-patch-apply --root /path/to/workspace --patch runtime/loops/<queue>/patches/<id>.patch --confirm-apply
 loop-engineering code-review-bundle --root /path/to/workspace --queue <queue> --task-id <id>
+loop-engineering code-task-closeout --root /path/to/workspace --queue <queue> --task-id <id>
 loop-engineering code-worktree-cleanup-plan --root /path/to/workspace --queue <queue>
 loop-engineering code-worktree-cleanup --root /path/to/workspace --queue <queue> --confirm-cleanup
 agent-loop status --root /path/to/workspace
@@ -47,13 +48,15 @@ worktrees.
 
 `code-worktree-list`, `code-worktree-inspect`, `code-worktree-diff`,
 `code-worktree-export`, `code-patch-verify`, `code-patch-apply-plan`,
-`code-patch-apply`, `code-review-bundle`, `code-worktree-cleanup-plan`, and
-`code-worktree-cleanup` are review and handoff commands for code queues.
+`code-patch-apply`, `code-review-bundle`, `code-task-closeout`,
+`code-worktree-cleanup-plan`, and `code-worktree-cleanup` are review and
+handoff commands for code queues.
 They report branch, path, dirty status, verification status, diff summaries,
 patch output, exported patch artifacts, untracked files, whether an exported
 patch still passes `git apply --check --binary`, whether it is safe to apply,
 review bundle files, which retained worktrees are cleanup candidates, and
-confirmation-gated cleanup of reviewed worktrees.
+confirmation-gated cleanup of reviewed worktrees. Closeout artifacts summarize
+the task's final review, patch, apply-plan, cleanup, and next-action state.
 Actual patch application requires `--confirm-apply` and still does not stage,
 commit, push, merge, or change queue state.
 Actual worktree cleanup requires `--confirm-cleanup`; dirty worktrees require a
