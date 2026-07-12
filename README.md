@@ -49,6 +49,7 @@ loop-engineering code-patch-apply --patch runtime/loops/code-tasks/patches/<id>.
 loop-engineering code-review-bundle --queue code-tasks --task-id <id>
 loop-engineering code-task-closeout --queue code-tasks --task-id <id>
 loop-engineering code-task-autoflow --queue code-tasks --task-id <id>
+loop-engineering code-task-autoflow --queue code-tasks --all-actionable --until closeout
 loop-engineering code-task-status --queue code-tasks
 loop-engineering code-worktree-cleanup-plan --queue code-tasks
 loop-engineering code-worktree-cleanup --queue code-tasks --confirm-cleanup
@@ -368,6 +369,20 @@ By default, `code-task-autoflow` runs the review preparation flow through
 generates the closeout artifact. Existing patch, review, and closeout artifacts
 are skipped unless `--force` is set. It does not apply patches, remove
 worktrees, stage, commit, push, merge, delete branches, or change queue state.
+
+`v0.3.12` adds batch autoflow for actionable code tasks:
+
+```bash
+loop-engineering code-task-autoflow --queue code-tasks --all-actionable
+loop-engineering code-task-autoflow --queue code-tasks --all-actionable --until closeout --json
+```
+
+Batch autoflow reads `code-task-status`, selects tasks whose next actions need
+patch export, review generation, or, with `--until closeout`, closeout
+generation, then runs the same safe autoflow for each selected task. Custom
+output paths are intentionally disabled in batch mode. It still does not apply
+patches, remove worktrees, stage, commit, push, merge, delete branches, or
+change queue state.
 
 ## Skill
 

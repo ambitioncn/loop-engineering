@@ -1,7 +1,7 @@
 # npm Package
 
 Package name: `agent-loop-engineering`
-Version: `0.3.11`
+Version: `0.3.12`
 
 Install from npm:
 
@@ -36,6 +36,7 @@ loop-engineering code-patch-apply --root /path/to/workspace --patch runtime/loop
 loop-engineering code-review-bundle --root /path/to/workspace --queue <queue> --task-id <id>
 loop-engineering code-task-closeout --root /path/to/workspace --queue <queue> --task-id <id>
 loop-engineering code-task-autoflow --root /path/to/workspace --queue <queue> --task-id <id>
+loop-engineering code-task-autoflow --root /path/to/workspace --queue <queue> --all-actionable --until closeout
 loop-engineering code-task-status --root /path/to/workspace --queue <queue>
 loop-engineering code-worktree-cleanup-plan --root /path/to/workspace --queue <queue>
 loop-engineering code-worktree-cleanup --root /path/to/workspace --queue <queue> --confirm-cleanup
@@ -65,7 +66,9 @@ Status ledgers summarize task-level queue, worktree, patch, review, closeout,
 cleanup, and next-action state without writing artifacts.
 Autoflow runs export, patch verification, apply-plan, and review generation by
 default, and can also write closeout artifacts with `--until closeout`; it skips
-existing artifacts unless `--force` is supplied.
+existing artifacts unless `--force` is supplied. Batch autoflow with
+`--all-actionable` reads the status ledger and runs the same safe flow across
+tasks that need export, review, or closeout artifacts.
 Actual patch application requires `--confirm-apply` and still does not stage,
 commit, push, merge, or change queue state.
 Actual worktree cleanup requires `--confirm-cleanup`; dirty worktrees require a

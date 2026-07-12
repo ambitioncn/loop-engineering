@@ -47,6 +47,7 @@ loop-engineering code-patch-apply --root /path/to/workspace --patch runtime/loop
 loop-engineering code-review-bundle --root /path/to/workspace --queue <queue> --task-id <id>
 loop-engineering code-task-closeout --root /path/to/workspace --queue <queue> --task-id <id>
 loop-engineering code-task-autoflow --root /path/to/workspace --queue <queue> --task-id <id>
+loop-engineering code-task-autoflow --root /path/to/workspace --queue <queue> --all-actionable --until closeout
 loop-engineering code-task-status --root /path/to/workspace --queue <queue>
 loop-engineering code-worktree-cleanup-plan --root /path/to/workspace --queue <queue>
 loop-engineering code-worktree-cleanup --root /path/to/workspace --queue <queue> --confirm-cleanup
@@ -245,6 +246,7 @@ loop-engineering code-task-closeout --root /path/to/workspace --queue code-tasks
 loop-engineering code-task-closeout --root /path/to/workspace --queue code-tasks --run-id <id> --output closeout.md --json
 loop-engineering code-task-autoflow --root /path/to/workspace --queue code-tasks --task-id <id>
 loop-engineering code-task-autoflow --root /path/to/workspace --queue code-tasks --run-id <id> --until closeout --json
+loop-engineering code-task-autoflow --root /path/to/workspace --queue code-tasks --all-actionable --until closeout --json
 loop-engineering code-task-status --root /path/to/workspace --queue code-tasks
 loop-engineering code-task-status --root /path/to/workspace --queue code-tasks --task-id <id> --json
 loop-engineering code-worktree-cleanup-plan --root /path/to/workspace --queue code-tasks
@@ -281,7 +283,9 @@ status, review presence, cleanup recommendation, and remaining next actions.
 preparation flow through export, patch verification, apply-plan, and review
 bundle generation by default. With `--until closeout`, it also writes the
 closeout artifact. It skips existing patch/review/closeout artifacts unless
-`--force` is supplied.
+`--force` is supplied. With `--all-actionable`, it reads `code-task-status` and
+runs the same safe flow across tasks whose next actions require export, review,
+or closeout generation; custom output paths are disabled in batch mode.
 `code-task-status` is a read-only task ledger that reports queue state, worktree
 existence, patch/review/closeout presence, cleanup recommendation, aggregate
 counts, and next recommended commands. Planning, status, and closeout commands

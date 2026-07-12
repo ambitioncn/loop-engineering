@@ -13,6 +13,7 @@ import {
   codePatchVerify,
   codeReviewBundle,
   codeTaskAutoflow,
+  codeTaskAutoflowBatch,
   codeTaskCloseout,
   codeTaskStatus,
   configFilesFromArgs,
@@ -72,6 +73,7 @@ function parseArgs(argv) {
     else if (a === '--limit') args.limit = Number.parseInt(argv[++i], 10);
     else if (a === '--notify-command') args.notifyCommand = argv[++i];
     else if (a === '--include-active') args.includeActive = true;
+    else if (a === '--all-actionable') args.allActionable = true;
     else if (a === '--confirm-apply') args.confirmApply = true;
     else if (a === '--confirm-cleanup') args.confirmCleanup = true;
     else if (a === '--allow-dirty') args.allowDirty = true;
@@ -111,7 +113,7 @@ Usage:
   loop-engineering code-patch-apply --patch runtime/loops/code-tasks/patches/task.patch --confirm-apply [--root <workspace>] [--allow-dirty] [--json]
   loop-engineering code-review-bundle --queue name [--task-id id | --run-id id] [--output review.md] [--force] [--root <workspace>] [--json]
   loop-engineering code-task-closeout --queue name [--task-id id | --run-id id] [--output closeout.md] [--force] [--root <workspace>] [--json]
-  loop-engineering code-task-autoflow --queue name [--task-id id | --run-id id] [--until review|closeout] [--force] [--root <workspace>] [--json]
+  loop-engineering code-task-autoflow --queue name [--task-id id | --run-id id | --all-actionable] [--until review|closeout] [--force] [--root <workspace>] [--json]
   loop-engineering code-task-status --queue name [--task-id id | --run-id id] [--limit 20] [--root <workspace>] [--json]
   loop-engineering code-worktree-cleanup-plan --queue name [--limit 50] [--root <workspace>] [--json]
   loop-engineering code-worktree-cleanup --queue name --confirm-cleanup [--limit 50] [--include-orphans] [--root <workspace>] [--json]
@@ -640,7 +642,7 @@ async function codeTaskCloseoutCommand(args) {
 async function codeTaskAutoflowCommand(args) {
   const config = await loadQueueConfig(args.root, args.config);
   const options = mergeQueueOptions(config, args);
-  const result = await codeTaskAutoflow(args.root, options.queue, {
+  const flowOptions = {
     config: options,
     taskId: args.taskId,
     runId: args.runId,
@@ -652,9 +654,29 @@ async function codeTaskAutoflowCommand(args) {
     force: args.force,
     timeoutMs: args.timeoutMs,
     allowDirty: args.allowDirty
-  });
+  };
+  const result = args.allActionable
+    ? await codeTaskAutoflowBatch(args.root, options.queue, flowOptions)
+    : await codeTaskAutoflow(args.root, options.queue, flowOptions);
   if (args.json) {
     console.log(JSON.stringify(result, null, 2));
+  } else if (args.allActionable) {
+    console.log(`${result.queue}: autoflow ${result.status}`);
+    console.log(`  until: ${result.until}`);
+    console.log(`  inspected tasks: ${result.inspectedTasks}`);
+    console.log(`  actionable tasks: ${result.candidateTasks}`);
+    console.log(`  safety: no apply, no cleanup, no queue state changes`);
+    console.log(`  counts: ${Object.entries(result.counts).map(([key, value]) => `${key}=${value}`).join(', ') || 'none'}`);
+    for (const item of result.results) {
+      console.log(`${item.status} ${item.taskId ?? item.runId}`);
+      for (const step of item.steps ?? []) {
+        const detail = step.artifact ? ` ${step.artifact}` : '';
+        console.log(`  ${step.name}: ${step.status}${detail}`);
+      }
+      if (item.errors?.length > 0) {
+        for (const error of item.errors) console.log(`  error ${error.step}: ${error.message}`);
+      }
+    }
   } else {
     console.log(`${result.queue}: autoflow ${result.status}`);
     console.log(`  task: ${result.taskId ?? result.runId}`);
