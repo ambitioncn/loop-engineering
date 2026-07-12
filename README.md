@@ -41,6 +41,7 @@ loop-engineering queue-cancel --queue agent-tasks --task-id <id> --reason "not n
 loop-engineering queue-requeue --queue agent-tasks --task-id <id>
 loop-engineering code-worktree-list --queue code-tasks
 loop-engineering code-worktree-inspect --queue code-tasks --task-id <id>
+loop-engineering code-worktree-diff --queue code-tasks --task-id <id>
 ```
 
 Artifacts are written to:
@@ -225,6 +226,18 @@ loop-engineering code-worktree-inspect --queue code-tasks --run-id <id> --json
 These commands read queue run artifacts and report branch, path, dirty status,
 verification status, diff summaries, and untracked files. They do not remove
 worktrees or change git state.
+
+`v0.3.2` adds read-only patch review from the recorded worktree:
+
+```bash
+loop-engineering code-worktree-diff --queue code-tasks --task-id <id>
+loop-engineering code-worktree-diff --queue code-tasks --run-id <id> --json
+```
+
+It resolves the worktree from the run artifact, keeps the path inside the
+workspace root, then prints `git diff --stat HEAD`, `git diff --name-status
+HEAD`, `git diff --binary HEAD`, and untracked file names. It does not stage,
+commit, push, merge, delete, or checkout anything.
 
 ## Skill
 

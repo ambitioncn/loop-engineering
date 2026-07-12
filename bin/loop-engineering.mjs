@@ -2,6 +2,7 @@
 import path from 'node:path';
 import {
   applyBreaker,
+  codeWorktreeDiff,
   codeWorktreeInspect,
   codeWorktreeList,
   configFilesFromArgs,
@@ -83,6 +84,7 @@ Usage:
   loop-engineering queue-requeue --queue name --task-id id [--root <workspace>]
   loop-engineering code-worktree-list --queue name [--limit 20] [--root <workspace>] [--json]
   loop-engineering code-worktree-inspect --queue name [--task-id id | --run-id id] [--root <workspace>] [--json]
+  loop-engineering code-worktree-diff --queue name [--task-id id | --run-id id] [--root <workspace>] [--json]
 
 Exit codes:
   0 success/report-only
@@ -426,6 +428,30 @@ async function codeWorktreeInspectCommand(args) {
   return 0;
 }
 
+async function codeWorktreeDiffCommand(args) {
+  const config = await loadQueueConfig(args.root, args.config);
+  const options = mergeQueueOptions(config, args);
+  const result = await codeWorktreeDiff(args.root, options.queue, {
+    taskId: args.taskId,
+    runId: args.runId,
+    limit: args.limit
+  });
+  if (args.json) {
+    console.log(JSON.stringify(result, null, 2));
+  } else {
+    console.log(`${result.status} ${result.taskId}`);
+    console.log(`  branch: ${result.worktree?.branch ?? 'none'}`);
+    console.log(`  path: ${result.worktree?.path ?? 'none'}`);
+    console.log(`  run: ${result.file}`);
+    if (result.diffStat) console.log(`\nDiff stat:\n${result.diffStat}`);
+    if (result.diffNameStatus) console.log(`\nDiff names:\n${result.diffNameStatus}`);
+    if (result.untracked) console.log(`\nUntracked files:\n${result.untracked}`);
+    if (result.patch) console.log(`\nPatch:\n${result.patch}`);
+    else console.log('\nPatch: (empty)');
+  }
+  return 0;
+}
+
 function indent(value) {
   return String(value).split('\n').filter(Boolean).map((line) => `    ${line}`).join('\n');
 }
@@ -465,6 +491,7 @@ async function main() {
   if (command === 'queue-requeue') return queueRequeueCommand(args);
   if (command === 'code-worktree-list') return codeWorktreeListCommand(args);
   if (command === 'code-worktree-inspect') return codeWorktreeInspectCommand(args);
+  if (command === 'code-worktree-diff') return codeWorktreeDiffCommand(args);
   throw new Error(`Unknown command: ${command}`);
 }
 

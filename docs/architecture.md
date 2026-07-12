@@ -89,6 +89,18 @@ These commands summarize the recorded branch, path, dirty state, verification
 status, diff summaries, and untracked files. They do not remove worktrees or
 change git state.
 
+`v0.3.2` adds read-only patch review:
+
+```bash
+loop-engineering code-worktree-diff --queue code-tasks --task-id <id>
+loop-engineering code-worktree-diff --queue code-tasks --run-id <id> --json
+```
+
+The command resolves the recorded worktree path from the run artifact, keeps it
+inside the workspace root, and prints `git diff --stat HEAD`, `git diff
+--name-status HEAD`, `git diff --binary HEAD`, and untracked file names. It
+does not checkout, stage, commit, push, merge, delete, or modify queue state.
+
 ## Artifacts
 
 Loop specs store state and runs under the target workspace:

@@ -1,7 +1,7 @@
 # npm Package
 
 Package name: `agent-loop-engineering`
-Version: `0.3.1`
+Version: `0.3.2`
 
 Install from npm:
 
@@ -28,6 +28,7 @@ loop-engineering queue-cancel --root /path/to/workspace --queue <queue> --task-i
 loop-engineering queue-requeue --root /path/to/workspace --queue <queue> --task-id <id>
 loop-engineering code-worktree-list --root /path/to/workspace --queue <queue>
 loop-engineering code-worktree-inspect --root /path/to/workspace --queue <queue> --task-id <id>
+loop-engineering code-worktree-diff --root /path/to/workspace --queue <queue> --task-id <id>
 agent-loop status --root /path/to/workspace
 LOOP_WORKDIR=/path/to/workspace run-loop-cron.sh configs/loops/<id>.json
 ```
@@ -37,9 +38,9 @@ an isolated git worktree and branch, then runs configured verification commands
 and records diff/status summaries. It does not push, merge, or delete
 worktrees.
 
-`code-worktree-list` and `code-worktree-inspect` are read-only artifact
-inspection commands for code queues. They report branch, path, dirty status,
-verification status, diff summaries, and untracked files.
+`code-worktree-list`, `code-worktree-inspect`, and `code-worktree-diff` are
+read-only review commands for code queues. They report branch, path, dirty
+status, verification status, diff summaries, patch output, and untracked files.
 
 The package contains `bin/`, `lib/`, `scripts/`, `templates/`, and
 `skills/loop-engineering/`.
