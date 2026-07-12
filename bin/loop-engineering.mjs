@@ -15,6 +15,7 @@ import {
   codeTaskAutoflow,
   codeTaskAutoflowBatch,
   codeTaskCloseout,
+  codeTaskDashboard,
   codeTaskStatus,
   configFilesFromArgs,
   doctorReport,
@@ -114,6 +115,7 @@ Usage:
   loop-engineering code-review-bundle --queue name [--task-id id | --run-id id] [--output review.md] [--force] [--root <workspace>] [--json]
   loop-engineering code-task-closeout --queue name [--task-id id | --run-id id] [--output closeout.md] [--force] [--root <workspace>] [--json]
   loop-engineering code-task-autoflow --queue name [--task-id id | --run-id id | --all-actionable] [--until review|closeout] [--force] [--root <workspace>] [--json]
+  loop-engineering code-task-dashboard --queue name [--limit 20] [--root <workspace>] [--json]
   loop-engineering code-task-status --queue name [--task-id id | --run-id id] [--limit 20] [--root <workspace>] [--json]
   loop-engineering code-worktree-cleanup-plan --queue name [--limit 50] [--root <workspace>] [--json]
   loop-engineering code-worktree-cleanup --queue name --confirm-cleanup [--limit 50] [--include-orphans] [--root <workspace>] [--json]
@@ -733,6 +735,41 @@ async function codeTaskStatusCommand(args) {
   return 0;
 }
 
+async function codeTaskDashboardCommand(args) {
+  const config = await loadQueueConfig(args.root, args.config);
+  const options = mergeQueueOptions(config, args);
+  const result = await codeTaskDashboard(args.root, options.queue, {
+    config: options,
+    limit: args.limit
+  });
+  if (args.json) {
+    console.log(JSON.stringify(result, null, 2));
+  } else {
+    console.log(`${result.queue}: code task dashboard`);
+    console.log(`  queued: ${result.queueSummary.queued}`);
+    console.log(`  active: ${result.queueSummary.active}`);
+    console.log(`  done: ${result.queueSummary.done}`);
+    console.log(`  failed: ${result.queueSummary.failed}`);
+    console.log(`  canceled: ${result.queueSummary.canceled}`);
+    console.log(`  runs inspected: ${result.taskSummary.inspectedRuns}`);
+    console.log(`  task counts: ${Object.entries(result.taskSummary.counts).map(([key, value]) => `${key}=${value}`).join(', ') || 'none'}`);
+    console.log(`  actions: ${Object.entries(result.actionCounts).map(([key, value]) => `${key}=${value}`).join(', ')}`);
+    console.log(`  cleanup: candidates=${result.cleanupSummary.cleanupCandidates}, unexported_dirty=${result.cleanupSummary.unexportedDirty}, rejected_patches=${result.cleanupSummary.rejectedPatches}, missing=${result.cleanupSummary.missingWorktrees}, orphans=${result.cleanupSummary.orphanWorktrees}`);
+    if (result.priority.length > 0) {
+      console.log('  priority:');
+      for (const task of result.priority) {
+        console.log(`    - ${task.overallStatus} ${task.taskId ?? task.runId} ${task.title ?? ''}`.trimEnd());
+      }
+    }
+    if (result.recommendedCommands.length > 0) {
+      console.log('  recommended commands:');
+      for (const command of result.recommendedCommands) console.log(`    ${command}`);
+    }
+    console.log('  safety: read-only; no apply, cleanup, or queue state changes');
+  }
+  return 0;
+}
+
 async function codeWorktreeCleanupPlanCommand(args) {
   const config = await loadQueueConfig(args.root, args.config);
   const options = mergeQueueOptions(config, args);
@@ -845,6 +882,7 @@ async function main() {
   if (command === 'code-review-bundle') return codeReviewBundleCommand(args);
   if (command === 'code-task-closeout') return codeTaskCloseoutCommand(args);
   if (command === 'code-task-autoflow') return codeTaskAutoflowCommand(args);
+  if (command === 'code-task-dashboard') return codeTaskDashboardCommand(args);
   if (command === 'code-task-status') return codeTaskStatusCommand(args);
   if (command === 'code-worktree-cleanup-plan') return codeWorktreeCleanupPlanCommand(args);
   if (command === 'code-worktree-cleanup') return codeWorktreeCleanupCommand(args);

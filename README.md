@@ -50,6 +50,7 @@ loop-engineering code-review-bundle --queue code-tasks --task-id <id>
 loop-engineering code-task-closeout --queue code-tasks --task-id <id>
 loop-engineering code-task-autoflow --queue code-tasks --task-id <id>
 loop-engineering code-task-autoflow --queue code-tasks --all-actionable --until closeout
+loop-engineering code-task-dashboard --queue code-tasks
 loop-engineering code-task-status --queue code-tasks
 loop-engineering code-worktree-cleanup-plan --queue code-tasks
 loop-engineering code-worktree-cleanup --queue code-tasks --confirm-cleanup
@@ -383,6 +384,18 @@ generation, then runs the same safe autoflow for each selected task. Custom
 output paths are intentionally disabled in batch mode. It still does not apply
 patches, remove worktrees, stage, commit, push, merge, delete branches, or
 change queue state.
+
+`v0.3.13` adds a read-only dashboard for code task queues:
+
+```bash
+loop-engineering code-task-dashboard --queue code-tasks
+loop-engineering code-task-dashboard --queue code-tasks --json
+```
+
+The dashboard combines queue counts, task ledger counts, next-action counts,
+cleanup/orphan summaries, priority tasks, and recommended follow-up commands.
+It is read-only and does not apply patches, remove worktrees, stage, commit,
+push, merge, delete branches, or change queue state.
 
 ## Skill
 

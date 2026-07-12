@@ -1,6 +1,6 @@
 ---
 name: loop-engineering
-description: Create, run, inspect, and schedule OpenClaw-native loop engineering workflows for repeated agent tasks, health checks, task queues, cron-triggered verification, circuit-breaker escalation, and explicit "走 loop" / "loop engineering" task routing.
+description: "Loop engineering CLI v0.3.13 with code task dashboard."
 ---
 
 # Loop Engineering
@@ -48,6 +48,7 @@ loop-engineering code-review-bundle --root /path/to/workspace --queue <queue> --
 loop-engineering code-task-closeout --root /path/to/workspace --queue <queue> --task-id <id>
 loop-engineering code-task-autoflow --root /path/to/workspace --queue <queue> --task-id <id>
 loop-engineering code-task-autoflow --root /path/to/workspace --queue <queue> --all-actionable --until closeout
+loop-engineering code-task-dashboard --root /path/to/workspace --queue <queue>
 loop-engineering code-task-status --root /path/to/workspace --queue <queue>
 loop-engineering code-worktree-cleanup-plan --root /path/to/workspace --queue <queue>
 loop-engineering code-worktree-cleanup --root /path/to/workspace --queue <queue> --confirm-cleanup
@@ -247,6 +248,8 @@ loop-engineering code-task-closeout --root /path/to/workspace --queue code-tasks
 loop-engineering code-task-autoflow --root /path/to/workspace --queue code-tasks --task-id <id>
 loop-engineering code-task-autoflow --root /path/to/workspace --queue code-tasks --run-id <id> --until closeout --json
 loop-engineering code-task-autoflow --root /path/to/workspace --queue code-tasks --all-actionable --until closeout --json
+loop-engineering code-task-dashboard --root /path/to/workspace --queue code-tasks
+loop-engineering code-task-dashboard --root /path/to/workspace --queue code-tasks --json
 loop-engineering code-task-status --root /path/to/workspace --queue code-tasks
 loop-engineering code-task-status --root /path/to/workspace --queue code-tasks --task-id <id> --json
 loop-engineering code-worktree-cleanup-plan --root /path/to/workspace --queue code-tasks
@@ -289,9 +292,11 @@ or closeout generation; custom output paths are disabled in batch mode.
 `code-task-status` is a read-only task ledger that reports queue state, worktree
 existence, patch/review/closeout presence, cleanup recommendation, aggregate
 counts, and next recommended commands. Planning, status, and closeout commands
-do not remove worktrees. Autoflow does not apply patches, remove worktrees, or
-change queue state. Cleanup does not checkout, stage, commit, push, merge,
-delete branches, or change queue state.
+do not remove worktrees. `code-task-dashboard` is a read-only queue dashboard
+that combines queue counts, task ledger counts, action counts, cleanup/orphan
+summaries, priority tasks, and recommended follow-up commands. Autoflow does
+not apply patches, remove worktrees, or change queue state. Cleanup does not
+checkout, stage, commit, push, merge, delete branches, or change queue state.
 
 ## Operating Flow
 
