@@ -17,6 +17,7 @@ import {
   codeTaskCloseout,
   codeTaskDashboard,
   codeTaskFinish,
+  codeTaskRun,
   codeTaskStatus,
   configFilesFromArgs,
   doctorReport,
@@ -117,6 +118,7 @@ Usage:
   loop-engineering code-task-closeout --queue name [--task-id id | --run-id id] [--output closeout.md] [--force] [--root <workspace>] [--json]
   loop-engineering code-task-autoflow --queue name [--task-id id | --run-id id | --all-actionable] [--until review|closeout] [--force] [--root <workspace>] [--json]
   loop-engineering code-task-finish --queue name [--task-id id | --run-id id] --confirm-apply --confirm-cleanup [--force] [--root <workspace>] [--json]
+  loop-engineering code-task-run --queue name --title "Title" (--task "Body" | --file task.md) --confirm-apply --confirm-cleanup [--force] [--root <workspace>] [--json]
   loop-engineering code-task-dashboard --queue name [--limit 20] [--root <workspace>] [--json]
   loop-engineering code-task-status --queue name [--task-id id | --run-id id] [--limit 20] [--root <workspace>] [--json]
   loop-engineering code-worktree-cleanup-plan --queue name [--limit 50] [--root <workspace>] [--json]
@@ -739,6 +741,45 @@ async function codeTaskFinishCommand(args) {
   return result.ok ? 0 : 1;
 }
 
+async function codeTaskRunCommand(args) {
+  const configPath = args.config ?? (args.queue ? `configs/loops/queues/${args.queue}.json` : undefined);
+  const config = await loadQueueConfig(args.root, configPath);
+  const options = mergeQueueOptions(config, args);
+  const result = await codeTaskRun(args.root, options.queue, {
+    config: options,
+    title: args.title,
+    task: args.task,
+    file: args.file,
+    force: args.force,
+    timeoutMs: args.timeoutMs,
+    allowDirty: args.allowDirty,
+    confirmApply: args.confirmApply,
+    confirmCleanup: args.confirmCleanup
+  });
+  if (args.json) {
+    console.log(JSON.stringify(result, null, 2));
+  } else {
+    console.log(`${result.queue}: task run ${result.status}`);
+    console.log(`  task: ${result.taskId}`);
+    console.log(`  title: ${result.title}`);
+    console.log(`  queue run: ${result.queueRun?.status ?? 'not_run'} ${result.queueRun?.runPath ?? ''}`.trimEnd());
+    console.log(`  autoflow: ${result.autoflow?.status ?? 'not_run'}`);
+    console.log(`  finish: ${result.finish?.status ?? 'not_run'}`);
+    console.log(`  final verification: ${result.finalVerification.status}`);
+    if (result.finalVerification.commands.length > 0) {
+      for (const item of result.finalVerification.commands) {
+        console.log(`    ${item.result.exitCode === 0 ? 'ok' : 'fail'} ${item.cmd}`);
+      }
+    }
+    console.log('  safety: applied and cleaned only because confirmation flags were supplied; no stage, commit, push, merge, or branch delete');
+    if (result.errors.length > 0) {
+      console.log(`  errors: ${result.errors.length}`);
+      for (const error of result.errors) console.log(`    ${error.step}: ${error.message}`);
+    }
+  }
+  return result.ok ? 0 : 1;
+}
+
 async function codeTaskStatusCommand(args) {
   const config = await loadQueueConfig(args.root, args.config);
   const options = mergeQueueOptions(config, args);
@@ -924,6 +965,7 @@ async function main() {
   if (command === 'code-task-closeout') return codeTaskCloseoutCommand(args);
   if (command === 'code-task-autoflow') return codeTaskAutoflowCommand(args);
   if (command === 'code-task-finish') return codeTaskFinishCommand(args);
+  if (command === 'code-task-run') return codeTaskRunCommand(args);
   if (command === 'code-task-dashboard') return codeTaskDashboardCommand(args);
   if (command === 'code-task-status') return codeTaskStatusCommand(args);
   if (command === 'code-worktree-cleanup-plan') return codeWorktreeCleanupPlanCommand(args);

@@ -51,6 +51,7 @@ loop-engineering code-task-closeout --queue code-tasks --task-id <id>
 loop-engineering code-task-autoflow --queue code-tasks --task-id <id>
 loop-engineering code-task-autoflow --queue code-tasks --all-actionable --until closeout
 loop-engineering code-task-finish --queue code-tasks --task-id <id> --confirm-apply --confirm-cleanup
+loop-engineering code-task-run --queue code-tasks --title "Task" --task "Do the work" --confirm-apply --confirm-cleanup
 loop-engineering code-task-dashboard --queue code-tasks
 loop-engineering code-task-status --queue code-tasks
 loop-engineering code-worktree-cleanup-plan --queue code-tasks
@@ -426,6 +427,26 @@ ledger reports `ready_to_finish` and recommends the single-task
 `landed`, includes finish artifact status, patch-applied, and worktree-cleaned
 fields, and has no remaining next actions. Dashboards include landed tasks and
 finish action counts. These views remain read-only.
+
+`v0.3.16` adds a single end-to-end code task command for the basic loop
+engineering workflow:
+
+```bash
+loop-engineering code-task-run \
+  --queue code-tasks \
+  --title "Implement the feature" \
+  --task "Make the code change, update tests, and keep the package checks green." \
+  --confirm-apply \
+  --confirm-cleanup
+```
+
+`code-task-run` enqueues the task, processes one code worktree queue task,
+runs autoflow through closeout, finishes the task by applying the reviewed
+patch and cleaning that worktree, then reruns the queue's configured
+`worktree.verifyCommands` in the main workspace. It stops at the first failed
+stage and reports the artifact to inspect. It still requires
+`--confirm-apply` and `--confirm-cleanup`, and it does not stage, commit, push,
+merge, or delete branches.
 
 ## Skill
 

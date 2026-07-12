@@ -1,6 +1,6 @@
 ---
 name: loop-engineering
-description: "Loop engineering CLI v0.3.15 with finish-aware status."
+description: "Loop engineering CLI v0.3.16 with end-to-end code task run."
 ---
 
 # Loop Engineering
@@ -49,6 +49,7 @@ loop-engineering code-task-closeout --root /path/to/workspace --queue <queue> --
 loop-engineering code-task-autoflow --root /path/to/workspace --queue <queue> --task-id <id>
 loop-engineering code-task-autoflow --root /path/to/workspace --queue <queue> --all-actionable --until closeout
 loop-engineering code-task-finish --root /path/to/workspace --queue <queue> --task-id <id> --confirm-apply --confirm-cleanup
+loop-engineering code-task-run --root /path/to/workspace --queue <queue> --title "Title" --task "Task body" --confirm-apply --confirm-cleanup
 loop-engineering code-task-dashboard --root /path/to/workspace --queue <queue>
 loop-engineering code-task-status --root /path/to/workspace --queue <queue>
 loop-engineering code-worktree-cleanup-plan --root /path/to/workspace --queue <queue>
@@ -251,6 +252,7 @@ loop-engineering code-task-autoflow --root /path/to/workspace --queue code-tasks
 loop-engineering code-task-autoflow --root /path/to/workspace --queue code-tasks --all-actionable --until closeout --json
 loop-engineering code-task-finish --root /path/to/workspace --queue code-tasks --task-id <id> --confirm-apply --confirm-cleanup
 loop-engineering code-task-finish --root /path/to/workspace --queue code-tasks --run-id <id> --confirm-apply --confirm-cleanup --json
+loop-engineering code-task-run --root /path/to/workspace --queue code-tasks --title "Title" --task "Task body" --confirm-apply --confirm-cleanup
 loop-engineering code-task-dashboard --root /path/to/workspace --queue code-tasks
 loop-engineering code-task-dashboard --root /path/to/workspace --queue code-tasks --json
 loop-engineering code-task-status --root /path/to/workspace --queue code-tasks
@@ -297,18 +299,22 @@ existence, patch/review/closeout/finish presence, cleanup recommendation,
 aggregate counts, and next recommended commands. It reports `ready_to_finish`
 when a task has the required review and closeout artifacts plus a ready cleanup
 gate, and `landed` after a successful finish artifact exists. Planning, status,
-and closeout commands do not remove worktrees. `code-task-dashboard` is a
-read-only queue dashboard that combines queue counts, task ledger counts,
-action counts, cleanup/orphan summaries, ready-to-finish and landed task
-buckets, priority tasks, and recommended follow-up commands. Autoflow does not
-apply patches, remove worktrees, or change queue state. `code-task-finish` is a
-single-task, confirmation-gated landing command: it requires default patch,
-review, and closeout artifacts, verifies the apply plan and cleanup gate,
-applies the patch to the main workspace, removes that one reviewed worktree,
-and writes a finish artifact. It intentionally has no batch mode and does not
-stage, commit, push, merge, delete branches, or change queue state. Cleanup
-does not checkout, stage, commit, push, merge, delete branches, or change queue
-state.
+and closeout commands do not remove worktrees. `code-task-run` is the basic
+end-to-end code task command: it enqueues one task, processes one code worktree
+queue run, runs autoflow through closeout, finishes the reviewed task, and then
+reruns the queue's `worktree.verifyCommands` in the main workspace. It requires
+`--confirm-apply` and `--confirm-cleanup`, and stops with artifact pointers if
+any stage fails. `code-task-dashboard` is a read-only queue dashboard that
+combines queue counts, task ledger counts, action counts, cleanup/orphan
+summaries, ready-to-finish and landed task buckets, priority tasks, and
+recommended follow-up commands. Autoflow does not apply patches, remove
+worktrees, or change queue state. `code-task-finish` is a single-task,
+confirmation-gated landing command: it requires default patch, review, and
+closeout artifacts, verifies the apply plan and cleanup gate, applies the patch
+to the main workspace, removes that one reviewed worktree, and writes a finish
+artifact. It intentionally has no batch mode and does not stage, commit, push,
+merge, delete branches, or change queue state. Cleanup does not checkout, stage,
+commit, push, merge, delete branches, or change queue state.
 
 ## Operating Flow
 
