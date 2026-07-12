@@ -41,6 +41,7 @@ loop-engineering code-worktree-list --root /path/to/workspace --queue <queue>
 loop-engineering code-worktree-inspect --root /path/to/workspace --queue <queue> --task-id <id>
 loop-engineering code-worktree-diff --root /path/to/workspace --queue <queue> --task-id <id>
 loop-engineering code-worktree-export --root /path/to/workspace --queue <queue> --task-id <id>
+loop-engineering code-patch-verify --root /path/to/workspace --patch runtime/loops/<queue>/patches/<id>.patch
 ```
 
 If the package is not installed but exists in the workspace, use:
@@ -226,6 +227,8 @@ loop-engineering code-worktree-diff --root /path/to/workspace --queue code-tasks
 loop-engineering code-worktree-diff --root /path/to/workspace --queue code-tasks --run-id <id> --json
 loop-engineering code-worktree-export --root /path/to/workspace --queue code-tasks --task-id <id>
 loop-engineering code-worktree-export --root /path/to/workspace --queue code-tasks --run-id <id> --output review.patch --json
+loop-engineering code-patch-verify --root /path/to/workspace --patch runtime/loops/code-tasks/patches/<id>.patch
+loop-engineering code-patch-verify --root /path/to/workspace --patch review.patch --json
 ```
 
 These commands report branch, path, dirty status, verification status, diff
@@ -233,8 +236,10 @@ summaries, and untracked files from queue run artifacts. `code-worktree-diff`
 resolves the recorded worktree and prints the actual patch plus untracked file
 names for review. `code-worktree-export` writes the patch plus a JSON manifest
 under `runtime/loops/<queue>/patches/` by default and refuses to overwrite
-unless `--force` is set. They do not remove worktrees, checkout, stage, commit,
-push, merge, or change git state.
+unless `--force` is set. `code-patch-verify` reads an exported patch, strips
+loop-engineering metadata comments, and runs `git apply --check --binary` from
+the workspace root to confirm the patch still applies. They do not remove
+worktrees, checkout, stage, commit, push, merge, or change git state.
 
 ## Operating Flow
 

@@ -6,6 +6,7 @@ import {
   codeWorktreeExport,
   codeWorktreeInspect,
   codeWorktreeList,
+  codePatchVerify,
   configFilesFromArgs,
   doctorReport,
   initCodeQueueConfig,
@@ -54,6 +55,7 @@ function parseArgs(argv) {
     else if (a === '--task-id') args.taskId = argv[++i];
     else if (a === '--run-id') args.runId = argv[++i];
     else if (a === '--output') args.output = argv[++i];
+    else if (a === '--patch') args.patch = argv[++i];
     else if (a === '--reason') args.reason = argv[++i];
     else if (a === '--limit') args.limit = Number.parseInt(argv[++i], 10);
     else if (a === '--notify-command') args.notifyCommand = argv[++i];
@@ -88,6 +90,7 @@ Usage:
   loop-engineering code-worktree-inspect --queue name [--task-id id | --run-id id] [--root <workspace>] [--json]
   loop-engineering code-worktree-diff --queue name [--task-id id | --run-id id] [--root <workspace>] [--json]
   loop-engineering code-worktree-export --queue name [--task-id id | --run-id id] [--output file.patch] [--force] [--root <workspace>] [--json]
+  loop-engineering code-patch-verify --patch runtime/loops/code-tasks/patches/task.patch [--root <workspace>] [--json]
 
 Exit codes:
   0 success/report-only
@@ -477,6 +480,26 @@ async function codeWorktreeExportCommand(args) {
   return 0;
 }
 
+async function codePatchVerifyCommand(args) {
+  const result = await codePatchVerify(args.root, {
+    patch: args.patch,
+    timeoutMs: args.timeoutMs
+  });
+  if (args.json) {
+    console.log(JSON.stringify(result, null, 2));
+  } else {
+    console.log(`${result.status}: ${result.patchFile}`);
+    console.log(`  ok: ${result.ok ? 'yes' : 'no'}`);
+    console.log(`  files: ${result.diffFiles.length}`);
+    if (result.applyCheck) {
+      console.log(`  git apply --check: exit ${result.applyCheck.exitCode}`);
+      if (result.applyCheck.stderr) console.log(`  stderr:\n${indent(result.applyCheck.stderr)}`);
+      if (result.applyCheck.stdout) console.log(`  stdout:\n${indent(result.applyCheck.stdout)}`);
+    }
+  }
+  return result.ok ? 0 : 1;
+}
+
 function indent(value) {
   return String(value).split('\n').filter(Boolean).map((line) => `    ${line}`).join('\n');
 }
@@ -518,6 +541,7 @@ async function main() {
   if (command === 'code-worktree-inspect') return codeWorktreeInspectCommand(args);
   if (command === 'code-worktree-diff') return codeWorktreeDiffCommand(args);
   if (command === 'code-worktree-export') return codeWorktreeExportCommand(args);
+  if (command === 'code-patch-verify') return codePatchVerifyCommand(args);
   throw new Error(`Unknown command: ${command}`);
 }
 

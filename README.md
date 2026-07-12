@@ -43,6 +43,7 @@ loop-engineering code-worktree-list --queue code-tasks
 loop-engineering code-worktree-inspect --queue code-tasks --task-id <id>
 loop-engineering code-worktree-diff --queue code-tasks --task-id <id>
 loop-engineering code-worktree-export --queue code-tasks --task-id <id>
+loop-engineering code-patch-verify --patch runtime/loops/code-tasks/patches/<id>.patch
 ```
 
 Artifacts are written to:
@@ -251,6 +252,18 @@ By default it writes `runtime/loops/<queue>/patches/<taskId>.patch` plus a
 `.json` manifest containing source run, worktree, diff summary, and untracked
 file names. It refuses to overwrite existing exports unless `--force` is set
 and does not change git or queue state.
+
+`v0.3.4` adds offline patch verification:
+
+```bash
+loop-engineering code-patch-verify --patch runtime/loops/code-tasks/patches/<taskId>.patch
+loop-engineering code-patch-verify --patch review.patch --json
+```
+
+It reads an exported patch, strips loop-engineering metadata comments, and runs
+`git apply --check --binary` from the target workspace root. This verifies
+whether the patch still applies without staging, committing, checking out,
+merging, or changing queue state.
 
 ## Skill
 
