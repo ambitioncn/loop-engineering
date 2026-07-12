@@ -764,6 +764,7 @@ async function codeTaskStatusCommand(args) {
       console.log(`  patch: ${task.patch.exists ? 'exists' : 'missing'} ${task.patch.verifyStatus ?? 'not_run'}`);
       console.log(`  review: ${task.review.exists ? 'exists' : 'missing'}`);
       console.log(`  closeout: ${task.closeout.exists ? task.closeout.status ?? 'exists' : 'missing'}`);
+      console.log(`  finish: ${task.finish.exists ? task.finish.status ?? 'exists' : 'missing'}`);
       console.log(`  cleanup: ${task.cleanup.recommendation ?? 'unknown'}`);
       if (task.nextActions.length > 0) {
         console.log('  next actions:');

@@ -1,7 +1,7 @@
 # npm Package
 
 Package name: `agent-loop-engineering`
-Version: `0.3.14`
+Version: `0.3.15`
 
 Install from npm:
 
@@ -73,7 +73,9 @@ artifacts.
 Finish applies one reviewed patch to the main workspace and removes that one
 reviewed worktree only after default patch, review, and closeout artifacts are
 present and both `--confirm-apply` and `--confirm-cleanup` are supplied; it
-also writes a finish artifact.
+also writes a finish artifact. Status and dashboard views read finish artifacts:
+tasks ready to land report `ready_to_finish`, and successfully finished tasks
+report `landed` with finish status, patch-applied, and worktree-cleaned fields.
 Autoflow runs export, patch verification, apply-plan, and review generation by
 default, and can also write closeout artifacts with `--until closeout`; it skips
 existing artifacts unless `--force` is supplied. Batch autoflow with

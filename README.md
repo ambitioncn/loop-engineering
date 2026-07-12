@@ -413,6 +413,20 @@ JSON sidecar. It is intentionally single-task only, requires both confirmation
 flags, and still does not stage, commit, push, merge, delete branches, or
 change queue state.
 
+`v0.3.15` makes finish artifacts visible in status and dashboard views:
+
+```bash
+loop-engineering code-task-status --queue code-tasks --task-id <taskId>
+loop-engineering code-task-dashboard --queue code-tasks --json
+```
+
+After closeout artifacts are present and the cleanup gate is ready, the status
+ledger reports `ready_to_finish` and recommends the single-task
+`code-task-finish` command. After finish succeeds, the same task reports
+`landed`, includes finish artifact status, patch-applied, and worktree-cleaned
+fields, and has no remaining next actions. Dashboards include landed tasks and
+finish action counts. These views remain read-only.
+
 ## Skill
 
 The bundled skill is in `skills/loop-engineering/SKILL.md`. Install it from

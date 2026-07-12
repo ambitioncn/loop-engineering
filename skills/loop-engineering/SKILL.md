@@ -1,6 +1,6 @@
 ---
 name: loop-engineering
-description: "Loop engineering CLI v0.3.14 with code task finish."
+description: "Loop engineering CLI v0.3.15 with finish-aware status."
 ---
 
 # Loop Engineering
@@ -293,13 +293,16 @@ closeout artifact. It skips existing patch/review/closeout artifacts unless
 runs the same safe flow across tasks whose next actions require export, review,
 or closeout generation; custom output paths are disabled in batch mode.
 `code-task-status` is a read-only task ledger that reports queue state, worktree
-existence, patch/review/closeout presence, cleanup recommendation, aggregate
-counts, and next recommended commands. Planning, status, and closeout commands
-do not remove worktrees. `code-task-dashboard` is a read-only queue dashboard
-that combines queue counts, task ledger counts, action counts, cleanup/orphan
-summaries, priority tasks, and recommended follow-up commands. Autoflow does
-not apply patches, remove worktrees, or change queue state. `code-task-finish`
-is a single-task, confirmation-gated landing command: it requires default patch,
+existence, patch/review/closeout/finish presence, cleanup recommendation,
+aggregate counts, and next recommended commands. It reports `ready_to_finish`
+when a task has the required review and closeout artifacts plus a ready cleanup
+gate, and `landed` after a successful finish artifact exists. Planning, status,
+and closeout commands do not remove worktrees. `code-task-dashboard` is a
+read-only queue dashboard that combines queue counts, task ledger counts,
+action counts, cleanup/orphan summaries, ready-to-finish and landed task
+buckets, priority tasks, and recommended follow-up commands. Autoflow does not
+apply patches, remove worktrees, or change queue state. `code-task-finish` is a
+single-task, confirmation-gated landing command: it requires default patch,
 review, and closeout artifacts, verifies the apply plan and cleanup gate,
 applies the patch to the main workspace, removes that one reviewed worktree,
 and writes a finish artifact. It intentionally has no batch mode and does not
