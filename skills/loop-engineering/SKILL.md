@@ -44,6 +44,7 @@ loop-engineering code-worktree-export --root /path/to/workspace --queue <queue> 
 loop-engineering code-patch-verify --root /path/to/workspace --patch runtime/loops/<queue>/patches/<id>.patch
 loop-engineering code-patch-apply-plan --root /path/to/workspace --patch runtime/loops/<queue>/patches/<id>.patch
 loop-engineering code-patch-apply --root /path/to/workspace --patch runtime/loops/<queue>/patches/<id>.patch --confirm-apply
+loop-engineering code-review-bundle --root /path/to/workspace --queue <queue> --task-id <id>
 loop-engineering code-worktree-cleanup-plan --root /path/to/workspace --queue <queue>
 ```
 
@@ -234,6 +235,8 @@ loop-engineering code-patch-verify --root /path/to/workspace --patch runtime/loo
 loop-engineering code-patch-verify --root /path/to/workspace --patch review.patch --json
 loop-engineering code-patch-apply-plan --root /path/to/workspace --patch review.patch --json
 loop-engineering code-patch-apply --root /path/to/workspace --patch review.patch --confirm-apply
+loop-engineering code-review-bundle --root /path/to/workspace --queue code-tasks --task-id <id>
+loop-engineering code-review-bundle --root /path/to/workspace --queue code-tasks --run-id <id> --output review.md --json
 loop-engineering code-worktree-cleanup-plan --root /path/to/workspace --queue code-tasks
 loop-engineering code-worktree-cleanup-plan --root /path/to/workspace --queue code-tasks --json
 ```
@@ -248,7 +251,10 @@ loop-engineering metadata comments, and runs `git apply --check --binary` from
 the workspace root to confirm the patch still applies. `code-patch-apply-plan`
 is read-only and reports whether the patch can be safely applied, including
 dirty affected files. `code-patch-apply` requires `--confirm-apply`, reruns the
-plan, and applies only when the plan is ready. `code-worktree-cleanup-plan`
+plan, and applies only when the plan is ready. `code-review-bundle` writes a
+Markdown review artifact plus JSON sidecar with run identity, worktree summary,
+verification, diff, patch export status, patch verify, and apply-plan status.
+`code-worktree-cleanup-plan`
 reports missing worktrees, dirty worktrees that have not been exported, rejected
 patch exports, orphan worktree directories, and suggested cleanup commands.
 `doctor` reports the same code queue findings as warnings. They do not remove

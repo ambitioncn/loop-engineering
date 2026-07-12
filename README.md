@@ -46,6 +46,7 @@ loop-engineering code-worktree-export --queue code-tasks --task-id <id>
 loop-engineering code-patch-verify --patch runtime/loops/code-tasks/patches/<id>.patch
 loop-engineering code-patch-apply-plan --patch runtime/loops/code-tasks/patches/<id>.patch
 loop-engineering code-patch-apply --patch runtime/loops/code-tasks/patches/<id>.patch --confirm-apply
+loop-engineering code-review-bundle --queue code-tasks --task-id <id>
 loop-engineering code-worktree-cleanup-plan --queue code-tasks
 ```
 
@@ -295,6 +296,20 @@ those affected files are already dirty unless `--allow-dirty` is supplied.
 `code-patch-apply` requires `--confirm-apply` and runs the same plan first; it
 only applies the patch when the plan is ready. It does not stage, commit, push,
 merge, checkout, delete worktrees, or change queue state.
+
+`v0.3.7` adds review bundle artifacts:
+
+```bash
+loop-engineering code-review-bundle --queue code-tasks --task-id <taskId>
+loop-engineering code-review-bundle --queue code-tasks --run-id <runId> --output review.md --json
+```
+
+It writes `runtime/loops/<queue>/reviews/<taskId>.md` plus a `.json` sidecar by
+default. The bundle collects the task/run identity, worktree summary,
+verification results, current worktree diff, exported patch presence,
+`code-patch-verify`, and `code-patch-apply-plan` when a default exported patch
+exists. It refuses to overwrite unless `--force` is set and does not export,
+apply, stage, commit, push, merge, delete worktrees, or change queue state.
 
 ## Skill
 
