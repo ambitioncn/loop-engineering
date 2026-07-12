@@ -48,6 +48,7 @@ loop-engineering code-patch-apply-plan --patch runtime/loops/code-tasks/patches/
 loop-engineering code-patch-apply --patch runtime/loops/code-tasks/patches/<id>.patch --confirm-apply
 loop-engineering code-review-bundle --queue code-tasks --task-id <id>
 loop-engineering code-task-closeout --queue code-tasks --task-id <id>
+loop-engineering code-task-autoflow --queue code-tasks --task-id <id>
 loop-engineering code-task-status --queue code-tasks
 loop-engineering code-worktree-cleanup-plan --queue code-tasks
 loop-engineering code-worktree-cleanup --queue code-tasks --confirm-cleanup
@@ -353,6 +354,19 @@ It reads recent code queue run artifacts and reports each task's queue state,
 worktree existence, patch export and verification status, review bundle
 presence, closeout status, cleanup recommendation, aggregate counts, and next
 recommended commands. It is read-only and does not apply patches, remove
+worktrees, stage, commit, push, merge, delete branches, or change queue state.
+
+`v0.3.11` adds a safe code task autoflow:
+
+```bash
+loop-engineering code-task-autoflow --queue code-tasks --task-id <taskId>
+loop-engineering code-task-autoflow --queue code-tasks --task-id <taskId> --until closeout --json
+```
+
+By default, `code-task-autoflow` runs the review preparation flow through
+`export -> verify -> apply-plan -> review`. With `--until closeout`, it also
+generates the closeout artifact. Existing patch, review, and closeout artifacts
+are skipped unless `--force` is set. It does not apply patches, remove
 worktrees, stage, commit, push, merge, delete branches, or change queue state.
 
 ## Skill

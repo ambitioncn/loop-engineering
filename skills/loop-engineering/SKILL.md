@@ -46,6 +46,7 @@ loop-engineering code-patch-apply-plan --root /path/to/workspace --patch runtime
 loop-engineering code-patch-apply --root /path/to/workspace --patch runtime/loops/<queue>/patches/<id>.patch --confirm-apply
 loop-engineering code-review-bundle --root /path/to/workspace --queue <queue> --task-id <id>
 loop-engineering code-task-closeout --root /path/to/workspace --queue <queue> --task-id <id>
+loop-engineering code-task-autoflow --root /path/to/workspace --queue <queue> --task-id <id>
 loop-engineering code-task-status --root /path/to/workspace --queue <queue>
 loop-engineering code-worktree-cleanup-plan --root /path/to/workspace --queue <queue>
 loop-engineering code-worktree-cleanup --root /path/to/workspace --queue <queue> --confirm-cleanup
@@ -242,6 +243,8 @@ loop-engineering code-review-bundle --root /path/to/workspace --queue code-tasks
 loop-engineering code-review-bundle --root /path/to/workspace --queue code-tasks --run-id <id> --output review.md --json
 loop-engineering code-task-closeout --root /path/to/workspace --queue code-tasks --task-id <id>
 loop-engineering code-task-closeout --root /path/to/workspace --queue code-tasks --run-id <id> --output closeout.md --json
+loop-engineering code-task-autoflow --root /path/to/workspace --queue code-tasks --task-id <id>
+loop-engineering code-task-autoflow --root /path/to/workspace --queue code-tasks --run-id <id> --until closeout --json
 loop-engineering code-task-status --root /path/to/workspace --queue code-tasks
 loop-engineering code-task-status --root /path/to/workspace --queue code-tasks --task-id <id> --json
 loop-engineering code-worktree-cleanup-plan --root /path/to/workspace --queue code-tasks
@@ -274,10 +277,16 @@ review bundle Markdown plus JSON sidecar. Orphan worktrees are skipped unless
 as warnings. `code-task-closeout` writes a Markdown closeout artifact plus JSON
 sidecar with task/run identity, verification, patch export/verify/apply-plan
 status, review presence, cleanup recommendation, and remaining next actions.
+`code-task-autoflow` is a safe orchestration command that runs the review
+preparation flow through export, patch verification, apply-plan, and review
+bundle generation by default. With `--until closeout`, it also writes the
+closeout artifact. It skips existing patch/review/closeout artifacts unless
+`--force` is supplied.
 `code-task-status` is a read-only task ledger that reports queue state, worktree
 existence, patch/review/closeout presence, cleanup recommendation, aggregate
 counts, and next recommended commands. Planning, status, and closeout commands
-do not remove worktrees; cleanup does not checkout, stage, commit, push, merge,
+do not remove worktrees. Autoflow does not apply patches, remove worktrees, or
+change queue state. Cleanup does not checkout, stage, commit, push, merge,
 delete branches, or change queue state.
 
 ## Operating Flow

@@ -1,7 +1,7 @@
 # npm Package
 
 Package name: `agent-loop-engineering`
-Version: `0.3.10`
+Version: `0.3.11`
 
 Install from npm:
 
@@ -35,6 +35,7 @@ loop-engineering code-patch-apply-plan --root /path/to/workspace --patch runtime
 loop-engineering code-patch-apply --root /path/to/workspace --patch runtime/loops/<queue>/patches/<id>.patch --confirm-apply
 loop-engineering code-review-bundle --root /path/to/workspace --queue <queue> --task-id <id>
 loop-engineering code-task-closeout --root /path/to/workspace --queue <queue> --task-id <id>
+loop-engineering code-task-autoflow --root /path/to/workspace --queue <queue> --task-id <id>
 loop-engineering code-task-status --root /path/to/workspace --queue <queue>
 loop-engineering code-worktree-cleanup-plan --root /path/to/workspace --queue <queue>
 loop-engineering code-worktree-cleanup --root /path/to/workspace --queue <queue> --confirm-cleanup
@@ -50,7 +51,8 @@ worktrees.
 `code-worktree-list`, `code-worktree-inspect`, `code-worktree-diff`,
 `code-worktree-export`, `code-patch-verify`, `code-patch-apply-plan`,
 `code-patch-apply`, `code-review-bundle`, `code-task-closeout`,
-`code-task-status`, `code-worktree-cleanup-plan`, and `code-worktree-cleanup`
+`code-task-autoflow`, `code-task-status`, `code-worktree-cleanup-plan`, and
+`code-worktree-cleanup`
 are review and
 handoff commands for code queues.
 They report branch, path, dirty status, verification status, diff summaries,
@@ -61,6 +63,9 @@ confirmation-gated cleanup of reviewed worktrees. Closeout artifacts summarize
 the task's final review, patch, apply-plan, cleanup, and next-action state.
 Status ledgers summarize task-level queue, worktree, patch, review, closeout,
 cleanup, and next-action state without writing artifacts.
+Autoflow runs export, patch verification, apply-plan, and review generation by
+default, and can also write closeout artifacts with `--until closeout`; it skips
+existing artifacts unless `--force` is supplied.
 Actual patch application requires `--confirm-apply` and still does not stage,
 commit, push, merge, or change queue state.
 Actual worktree cleanup requires `--confirm-cleanup`; dirty worktrees require a

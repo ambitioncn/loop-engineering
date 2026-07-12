@@ -12,6 +12,7 @@ import {
   codePatchApplyPlan,
   codePatchVerify,
   codeReviewBundle,
+  codeTaskAutoflow,
   codeTaskCloseout,
   codeTaskStatus,
   configFilesFromArgs,
@@ -62,7 +63,11 @@ function parseArgs(argv) {
     else if (a === '--task-id') args.taskId = argv[++i];
     else if (a === '--run-id') args.runId = argv[++i];
     else if (a === '--output') args.output = argv[++i];
+    else if (a === '--patch-output') args.patchOutput = argv[++i];
+    else if (a === '--review-output') args.reviewOutput = argv[++i];
+    else if (a === '--closeout-output') args.closeoutOutput = argv[++i];
     else if (a === '--patch') args.patch = argv[++i];
+    else if (a === '--until') args.until = argv[++i];
     else if (a === '--reason') args.reason = argv[++i];
     else if (a === '--limit') args.limit = Number.parseInt(argv[++i], 10);
     else if (a === '--notify-command') args.notifyCommand = argv[++i];
@@ -106,6 +111,7 @@ Usage:
   loop-engineering code-patch-apply --patch runtime/loops/code-tasks/patches/task.patch --confirm-apply [--root <workspace>] [--allow-dirty] [--json]
   loop-engineering code-review-bundle --queue name [--task-id id | --run-id id] [--output review.md] [--force] [--root <workspace>] [--json]
   loop-engineering code-task-closeout --queue name [--task-id id | --run-id id] [--output closeout.md] [--force] [--root <workspace>] [--json]
+  loop-engineering code-task-autoflow --queue name [--task-id id | --run-id id] [--until review|closeout] [--force] [--root <workspace>] [--json]
   loop-engineering code-task-status --queue name [--task-id id | --run-id id] [--limit 20] [--root <workspace>] [--json]
   loop-engineering code-worktree-cleanup-plan --queue name [--limit 50] [--root <workspace>] [--json]
   loop-engineering code-worktree-cleanup --queue name --confirm-cleanup [--limit 50] [--include-orphans] [--root <workspace>] [--json]
@@ -631,6 +637,44 @@ async function codeTaskCloseoutCommand(args) {
   return 0;
 }
 
+async function codeTaskAutoflowCommand(args) {
+  const config = await loadQueueConfig(args.root, args.config);
+  const options = mergeQueueOptions(config, args);
+  const result = await codeTaskAutoflow(args.root, options.queue, {
+    config: options,
+    taskId: args.taskId,
+    runId: args.runId,
+    limit: args.limit,
+    until: args.until,
+    patch: args.patchOutput,
+    review: args.reviewOutput,
+    closeout: args.closeoutOutput,
+    force: args.force,
+    timeoutMs: args.timeoutMs,
+    allowDirty: args.allowDirty
+  });
+  if (args.json) {
+    console.log(JSON.stringify(result, null, 2));
+  } else {
+    console.log(`${result.queue}: autoflow ${result.status}`);
+    console.log(`  task: ${result.taskId ?? result.runId}`);
+    console.log(`  until: ${result.until}`);
+    console.log(`  patch: ${result.artifacts.patchFile}`);
+    console.log(`  review: ${result.artifacts.reviewFile}`);
+    if (result.until === 'closeout') console.log(`  closeout: ${result.artifacts.closeoutFile}`);
+    console.log('  safety: no apply, no cleanup, no queue state changes');
+    for (const step of result.steps) {
+      const detail = step.artifact ? ` ${step.artifact}` : '';
+      console.log(`  ${step.name}: ${step.status}${detail}`);
+    }
+    if (result.errors.length > 0) {
+      console.log(`  errors: ${result.errors.length}`);
+      for (const error of result.errors) console.log(`    ${error.step}: ${error.message}`);
+    }
+  }
+  return result.ok ? 0 : 1;
+}
+
 async function codeTaskStatusCommand(args) {
   const config = await loadQueueConfig(args.root, args.config);
   const options = mergeQueueOptions(config, args);
@@ -778,6 +822,7 @@ async function main() {
   if (command === 'code-patch-apply') return codePatchApplyCommand(args);
   if (command === 'code-review-bundle') return codeReviewBundleCommand(args);
   if (command === 'code-task-closeout') return codeTaskCloseoutCommand(args);
+  if (command === 'code-task-autoflow') return codeTaskAutoflowCommand(args);
   if (command === 'code-task-status') return codeTaskStatusCommand(args);
   if (command === 'code-worktree-cleanup-plan') return codeWorktreeCleanupPlanCommand(args);
   if (command === 'code-worktree-cleanup') return codeWorktreeCleanupCommand(args);
