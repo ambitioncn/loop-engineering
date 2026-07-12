@@ -1,6 +1,6 @@
 {
   "name": "agent-loop-engineering",
-  "version": "0.3.4",
+  "version": "0.3.5",
   "private": false,
   "description": "OpenClaw-native loop engineering CLI, templates, and skill for verifiable agent work loops.",
   "type": "module",
@@ -10,7 +10,7 @@
     "run-loop-cron.sh": "scripts/run-loop-cron.sh"
   },
   "scripts": {
-    "check": "node --check bin/loop-engineering.mjs && node --check lib/core.mjs && node bin/loop-engineering.mjs verify --config templates/workspace-health.json --root . && node bin/loop-engineering.mjs queue-status --queue smoke --root . --json >/dev/null && node bin/loop-engineering.mjs code-queue-init --queue smoke-code --root /tmp/loop-engineering-check --force >/dev/null && node bin/loop-engineering.mjs code-worktree-list --queue smoke-code --root /tmp/loop-engineering-check --json >/dev/null && node bin/loop-engineering.mjs code-patch-verify --patch README.md --root . --json >/dev/null && node bin/loop-engineering.mjs summarize --root . --json >/dev/null && node bin/loop-engineering.mjs doctor --root . --json >/dev/null",
+    "check": "node --check bin/loop-engineering.mjs && node --check lib/core.mjs && node bin/loop-engineering.mjs verify --config templates/workspace-health.json --root . && node bin/loop-engineering.mjs queue-status --queue smoke --root . --json >/dev/null && node bin/loop-engineering.mjs code-queue-init --queue smoke-code --root /tmp/loop-engineering-check --force >/dev/null && node bin/loop-engineering.mjs code-worktree-list --queue smoke-code --root /tmp/loop-engineering-check --json >/dev/null && node bin/loop-engineering.mjs code-worktree-cleanup-plan --queue smoke-code --root /tmp/loop-engineering-check --json >/dev/null && node bin/loop-engineering.mjs code-patch-verify --patch README.md --root . --json >/dev/null && node bin/loop-engineering.mjs summarize --root . --json >/dev/null && node bin/loop-engineering.mjs doctor --root . --json >/dev/null",
     "pack:dry": "npm pack --dry-run"
   },
   "engines": {

@@ -44,6 +44,7 @@ loop-engineering code-worktree-inspect --queue code-tasks --task-id <id>
 loop-engineering code-worktree-diff --queue code-tasks --task-id <id>
 loop-engineering code-worktree-export --queue code-tasks --task-id <id>
 loop-engineering code-patch-verify --patch runtime/loops/code-tasks/patches/<id>.patch
+loop-engineering code-worktree-cleanup-plan --queue code-tasks
 ```
 
 Artifacts are written to:
@@ -264,6 +265,20 @@ It reads an exported patch, strips loop-engineering metadata comments, and runs
 `git apply --check --binary` from the target workspace root. This verifies
 whether the patch still applies without staging, committing, checking out,
 merging, or changing queue state.
+
+`v0.3.5` adds code worktree maintenance planning:
+
+```bash
+loop-engineering code-worktree-cleanup-plan --queue code-tasks
+loop-engineering code-worktree-cleanup-plan --queue code-tasks --json
+```
+
+It inspects recent code queue run artifacts, checks whether recorded worktrees
+still exist, detects dirty worktrees without exported patches, verifies default
+patch exports when present, and reports orphan worktree directories under the
+configured worktree base directory. It only prints recommendations and cleanup
+commands; it does not remove worktrees or change git/queue state. `doctor`
+also reports these code queue findings as warnings.
 
 ## Skill
 

@@ -3,6 +3,7 @@ import path from 'node:path';
 import {
   applyBreaker,
   codeWorktreeDiff,
+  codeWorktreeCleanupPlan,
   codeWorktreeExport,
   codeWorktreeInspect,
   codeWorktreeList,
@@ -91,6 +92,7 @@ Usage:
   loop-engineering code-worktree-diff --queue name [--task-id id | --run-id id] [--root <workspace>] [--json]
   loop-engineering code-worktree-export --queue name [--task-id id | --run-id id] [--output file.patch] [--force] [--root <workspace>] [--json]
   loop-engineering code-patch-verify --patch runtime/loops/code-tasks/patches/task.patch [--root <workspace>] [--json]
+  loop-engineering code-worktree-cleanup-plan --queue name [--limit 50] [--root <workspace>] [--json]
 
 Exit codes:
   0 success/report-only
@@ -500,6 +502,37 @@ async function codePatchVerifyCommand(args) {
   return result.ok ? 0 : 1;
 }
 
+async function codeWorktreeCleanupPlanCommand(args) {
+  const config = await loadQueueConfig(args.root, args.config);
+  const options = mergeQueueOptions(config, args);
+  const result = await codeWorktreeCleanupPlan(args.root, options.queue, {
+    config: options,
+    limit: args.limit
+  });
+  if (args.json) {
+    console.log(JSON.stringify(result, null, 2));
+  } else {
+    console.log(`${result.queue}: cleanup plan`);
+    console.log(`  inspected: ${result.inspectedRuns}`);
+    console.log(`  cleanup candidates: ${result.cleanupCandidates.length}`);
+    console.log(`  unexported dirty: ${result.unexportedDirty.length}`);
+    console.log(`  rejected patches: ${result.rejectedPatches.length}`);
+    console.log(`  missing worktrees: ${result.missingWorktrees.length}`);
+    console.log(`  orphan worktrees: ${result.orphanWorktrees.length}`);
+    for (const item of result.worktrees) {
+      console.log(`${item.recommendation} ${item.taskId ?? item.runId}`);
+      console.log(`  worktree: ${item.worktree?.path ?? 'none'}`);
+      if (item.exportedPatchFile) console.log(`  patch: ${item.exportedPatchFile} (${item.patchVerify?.status ?? 'unknown'})`);
+      for (const command of item.recommendedCommands) console.log(`  command: ${command}`);
+    }
+    for (const item of result.orphanWorktrees) {
+      console.log(`orphan_worktree ${item.path}`);
+      console.log(`  command: ${item.command}`);
+    }
+  }
+  return 0;
+}
+
 function indent(value) {
   return String(value).split('\n').filter(Boolean).map((line) => `    ${line}`).join('\n');
 }
@@ -542,6 +575,7 @@ async function main() {
   if (command === 'code-worktree-diff') return codeWorktreeDiffCommand(args);
   if (command === 'code-worktree-export') return codeWorktreeExportCommand(args);
   if (command === 'code-patch-verify') return codePatchVerifyCommand(args);
+  if (command === 'code-worktree-cleanup-plan') return codeWorktreeCleanupPlanCommand(args);
   throw new Error(`Unknown command: ${command}`);
 }
 
