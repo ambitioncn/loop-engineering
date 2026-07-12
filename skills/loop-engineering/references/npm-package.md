@@ -1,7 +1,7 @@
 # npm Package
 
 Package name: `agent-loop-engineering`
-Version: `0.3.5`
+Version: `0.3.6`
 
 Install from npm:
 
@@ -31,6 +31,8 @@ loop-engineering code-worktree-inspect --root /path/to/workspace --queue <queue>
 loop-engineering code-worktree-diff --root /path/to/workspace --queue <queue> --task-id <id>
 loop-engineering code-worktree-export --root /path/to/workspace --queue <queue> --task-id <id>
 loop-engineering code-patch-verify --root /path/to/workspace --patch runtime/loops/<queue>/patches/<id>.patch
+loop-engineering code-patch-apply-plan --root /path/to/workspace --patch runtime/loops/<queue>/patches/<id>.patch
+loop-engineering code-patch-apply --root /path/to/workspace --patch runtime/loops/<queue>/patches/<id>.patch --confirm-apply
 loop-engineering code-worktree-cleanup-plan --root /path/to/workspace --queue <queue>
 agent-loop status --root /path/to/workspace
 LOOP_WORKDIR=/path/to/workspace run-loop-cron.sh configs/loops/<id>.json
@@ -43,11 +45,14 @@ worktrees.
 
 `code-worktree-list`, `code-worktree-inspect`, `code-worktree-diff`,
 `code-worktree-export`, `code-patch-verify`, and
-`code-worktree-cleanup-plan` are review commands for code queues. They report
-branch, path, dirty status, verification status, diff summaries, patch output,
-exported patch artifacts, untracked files, whether an exported patch still
-passes `git apply --check --binary`, and which retained worktrees are cleanup
-candidates.
+`code-patch-apply-plan`, `code-patch-apply`, and
+`code-worktree-cleanup-plan` are review and handoff commands for code queues.
+They report branch, path, dirty status, verification status, diff summaries,
+patch output, exported patch artifacts, untracked files, whether an exported
+patch still passes `git apply --check --binary`, whether it is safe to apply,
+and which retained worktrees are cleanup candidates. Actual patch application
+requires `--confirm-apply` and still does not stage, commit, push, merge, or
+change queue state.
 
 The package contains `bin/`, `lib/`, `scripts/`, `templates/`, and
 `skills/loop-engineering/`.

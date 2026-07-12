@@ -7,6 +7,8 @@ import {
   codeWorktreeExport,
   codeWorktreeInspect,
   codeWorktreeList,
+  codePatchApply,
+  codePatchApplyPlan,
   codePatchVerify,
   configFilesFromArgs,
   doctorReport,
@@ -61,6 +63,8 @@ function parseArgs(argv) {
     else if (a === '--limit') args.limit = Number.parseInt(argv[++i], 10);
     else if (a === '--notify-command') args.notifyCommand = argv[++i];
     else if (a === '--include-active') args.includeActive = true;
+    else if (a === '--confirm-apply') args.confirmApply = true;
+    else if (a === '--allow-dirty') args.allowDirty = true;
     else if (a === '--json') args.json = true;
     else if (a === '--force') args.force = true;
     else if (a === '--help' || a === '-h') args.help = true;
@@ -92,6 +96,8 @@ Usage:
   loop-engineering code-worktree-diff --queue name [--task-id id | --run-id id] [--root <workspace>] [--json]
   loop-engineering code-worktree-export --queue name [--task-id id | --run-id id] [--output file.patch] [--force] [--root <workspace>] [--json]
   loop-engineering code-patch-verify --patch runtime/loops/code-tasks/patches/task.patch [--root <workspace>] [--json]
+  loop-engineering code-patch-apply-plan --patch runtime/loops/code-tasks/patches/task.patch [--root <workspace>] [--allow-dirty] [--json]
+  loop-engineering code-patch-apply --patch runtime/loops/code-tasks/patches/task.patch --confirm-apply [--root <workspace>] [--allow-dirty] [--json]
   loop-engineering code-worktree-cleanup-plan --queue name [--limit 50] [--root <workspace>] [--json]
 
 Exit codes:
@@ -502,6 +508,53 @@ async function codePatchVerifyCommand(args) {
   return result.ok ? 0 : 1;
 }
 
+async function codePatchApplyPlanCommand(args) {
+  const result = await codePatchApplyPlan(args.root, {
+    patch: args.patch,
+    timeoutMs: args.timeoutMs,
+    allowDirty: args.allowDirty
+  });
+  if (args.json) {
+    console.log(JSON.stringify(result, null, 2));
+  } else {
+    console.log(`${result.status}: ${result.patchFile}`);
+    console.log(`  can apply: ${result.canApply ? 'yes' : 'no'}`);
+    console.log(`  files: ${result.diffFiles.length}`);
+    if (result.affectedPaths.length > 0) console.log(`  affected:\n${indent(result.affectedPaths.join('\n'))}`);
+    if (result.dirtyAffected) console.log(`  dirty affected files:\n${indent(result.affectedStatus.stdout)}`);
+    if (result.applyCheck) {
+      console.log(`  git apply --check: exit ${result.applyCheck.exitCode}`);
+      if (result.applyCheck.stderr) console.log(`  stderr:\n${indent(result.applyCheck.stderr)}`);
+      if (result.applyCheck.stdout) console.log(`  stdout:\n${indent(result.applyCheck.stdout)}`);
+    }
+  }
+  return result.ok ? 0 : 1;
+}
+
+async function codePatchApplyCommand(args) {
+  const result = await codePatchApply(args.root, {
+    patch: args.patch,
+    timeoutMs: args.timeoutMs,
+    allowDirty: args.allowDirty,
+    confirmApply: args.confirmApply
+  });
+  if (args.json) {
+    console.log(JSON.stringify(result, null, 2));
+  } else {
+    console.log(`${result.status}: ${result.patchFile}`);
+    console.log(`  applied: ${result.applied ? 'yes' : 'no'}`);
+    console.log(`  files: ${result.diffFiles.length}`);
+    if (result.affectedPaths?.length > 0) console.log(`  affected:\n${indent(result.affectedPaths.join('\n'))}`);
+    if (result.apply) {
+      console.log(`  git apply: exit ${result.apply.exitCode}`);
+      if (result.apply.stderr) console.log(`  stderr:\n${indent(result.apply.stderr)}`);
+      if (result.apply.stdout) console.log(`  stdout:\n${indent(result.apply.stdout)}`);
+    }
+    if (result.applyCheck) console.log(`  prior git apply --check: exit ${result.applyCheck.exitCode}`);
+  }
+  return result.ok ? 0 : 1;
+}
+
 async function codeWorktreeCleanupPlanCommand(args) {
   const config = await loadQueueConfig(args.root, args.config);
   const options = mergeQueueOptions(config, args);
@@ -575,6 +628,8 @@ async function main() {
   if (command === 'code-worktree-diff') return codeWorktreeDiffCommand(args);
   if (command === 'code-worktree-export') return codeWorktreeExportCommand(args);
   if (command === 'code-patch-verify') return codePatchVerifyCommand(args);
+  if (command === 'code-patch-apply-plan') return codePatchApplyPlanCommand(args);
+  if (command === 'code-patch-apply') return codePatchApplyCommand(args);
   if (command === 'code-worktree-cleanup-plan') return codeWorktreeCleanupPlanCommand(args);
   throw new Error(`Unknown command: ${command}`);
 }

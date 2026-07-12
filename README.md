@@ -44,6 +44,8 @@ loop-engineering code-worktree-inspect --queue code-tasks --task-id <id>
 loop-engineering code-worktree-diff --queue code-tasks --task-id <id>
 loop-engineering code-worktree-export --queue code-tasks --task-id <id>
 loop-engineering code-patch-verify --patch runtime/loops/code-tasks/patches/<id>.patch
+loop-engineering code-patch-apply-plan --patch runtime/loops/code-tasks/patches/<id>.patch
+loop-engineering code-patch-apply --patch runtime/loops/code-tasks/patches/<id>.patch --confirm-apply
 loop-engineering code-worktree-cleanup-plan --queue code-tasks
 ```
 
@@ -279,6 +281,20 @@ patch exports when present, and reports orphan worktree directories under the
 configured worktree base directory. It only prints recommendations and cleanup
 commands; it does not remove worktrees or change git/queue state. `doctor`
 also reports these code queue findings as warnings.
+
+`v0.3.6` adds confirmation-gated patch application:
+
+```bash
+loop-engineering code-patch-apply-plan --patch runtime/loops/code-tasks/patches/<taskId>.patch
+loop-engineering code-patch-apply --patch runtime/loops/code-tasks/patches/<taskId>.patch --confirm-apply
+```
+
+`code-patch-apply-plan` is read-only. It strips loop-engineering metadata,
+checks `git apply --check --binary`, reports affected files, and blocks when
+those affected files are already dirty unless `--allow-dirty` is supplied.
+`code-patch-apply` requires `--confirm-apply` and runs the same plan first; it
+only applies the patch when the plan is ready. It does not stage, commit, push,
+merge, checkout, delete worktrees, or change queue state.
 
 ## Skill
 

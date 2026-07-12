@@ -42,6 +42,8 @@ loop-engineering code-worktree-inspect --root /path/to/workspace --queue <queue>
 loop-engineering code-worktree-diff --root /path/to/workspace --queue <queue> --task-id <id>
 loop-engineering code-worktree-export --root /path/to/workspace --queue <queue> --task-id <id>
 loop-engineering code-patch-verify --root /path/to/workspace --patch runtime/loops/<queue>/patches/<id>.patch
+loop-engineering code-patch-apply-plan --root /path/to/workspace --patch runtime/loops/<queue>/patches/<id>.patch
+loop-engineering code-patch-apply --root /path/to/workspace --patch runtime/loops/<queue>/patches/<id>.patch --confirm-apply
 loop-engineering code-worktree-cleanup-plan --root /path/to/workspace --queue <queue>
 ```
 
@@ -230,6 +232,8 @@ loop-engineering code-worktree-export --root /path/to/workspace --queue code-tas
 loop-engineering code-worktree-export --root /path/to/workspace --queue code-tasks --run-id <id> --output review.patch --json
 loop-engineering code-patch-verify --root /path/to/workspace --patch runtime/loops/code-tasks/patches/<id>.patch
 loop-engineering code-patch-verify --root /path/to/workspace --patch review.patch --json
+loop-engineering code-patch-apply-plan --root /path/to/workspace --patch review.patch --json
+loop-engineering code-patch-apply --root /path/to/workspace --patch review.patch --confirm-apply
 loop-engineering code-worktree-cleanup-plan --root /path/to/workspace --queue code-tasks
 loop-engineering code-worktree-cleanup-plan --root /path/to/workspace --queue code-tasks --json
 ```
@@ -241,11 +245,14 @@ names for review. `code-worktree-export` writes the patch plus a JSON manifest
 under `runtime/loops/<queue>/patches/` by default and refuses to overwrite
 unless `--force` is set. `code-patch-verify` reads an exported patch, strips
 loop-engineering metadata comments, and runs `git apply --check --binary` from
-the workspace root to confirm the patch still applies. `code-worktree-cleanup-plan`
+the workspace root to confirm the patch still applies. `code-patch-apply-plan`
+is read-only and reports whether the patch can be safely applied, including
+dirty affected files. `code-patch-apply` requires `--confirm-apply`, reruns the
+plan, and applies only when the plan is ready. `code-worktree-cleanup-plan`
 reports missing worktrees, dirty worktrees that have not been exported, rejected
 patch exports, orphan worktree directories, and suggested cleanup commands.
 `doctor` reports the same code queue findings as warnings. They do not remove
-worktrees, checkout, stage, commit, push, merge, or change git state.
+worktrees, checkout, stage, commit, push, merge, or change queue state.
 
 ## Operating Flow
 
