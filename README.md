@@ -48,6 +48,7 @@ loop-engineering code-patch-apply-plan --patch runtime/loops/code-tasks/patches/
 loop-engineering code-patch-apply --patch runtime/loops/code-tasks/patches/<id>.patch --confirm-apply
 loop-engineering code-review-bundle --queue code-tasks --task-id <id>
 loop-engineering code-worktree-cleanup-plan --queue code-tasks
+loop-engineering code-worktree-cleanup --queue code-tasks --confirm-cleanup
 ```
 
 Artifacts are written to:
@@ -310,6 +311,20 @@ verification results, current worktree diff, exported patch presence,
 `code-patch-verify`, and `code-patch-apply-plan` when a default exported patch
 exists. It refuses to overwrite unless `--force` is set and does not export,
 apply, stage, commit, push, merge, delete worktrees, or change queue state.
+
+`v0.3.8` adds confirmation-gated worktree cleanup:
+
+```bash
+loop-engineering code-worktree-cleanup --queue code-tasks --confirm-cleanup
+loop-engineering code-worktree-cleanup --queue code-tasks --confirm-cleanup --include-orphans --json
+```
+
+It reruns `code-worktree-cleanup-plan` and removes only gated candidates with
+`git worktree remove`. Dirty worktrees require a default exported patch,
+successful `code-patch-verify`, and an existing review bundle Markdown plus
+JSON sidecar. Orphan worktree directories are skipped unless `--include-orphans`
+is supplied. The command does not stage, commit, push, merge, delete branches,
+or change queue state.
 
 ## Skill
 

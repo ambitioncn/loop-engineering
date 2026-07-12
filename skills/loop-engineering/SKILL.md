@@ -46,6 +46,7 @@ loop-engineering code-patch-apply-plan --root /path/to/workspace --patch runtime
 loop-engineering code-patch-apply --root /path/to/workspace --patch runtime/loops/<queue>/patches/<id>.patch --confirm-apply
 loop-engineering code-review-bundle --root /path/to/workspace --queue <queue> --task-id <id>
 loop-engineering code-worktree-cleanup-plan --root /path/to/workspace --queue <queue>
+loop-engineering code-worktree-cleanup --root /path/to/workspace --queue <queue> --confirm-cleanup
 ```
 
 If the package is not installed but exists in the workspace, use:
@@ -239,6 +240,8 @@ loop-engineering code-review-bundle --root /path/to/workspace --queue code-tasks
 loop-engineering code-review-bundle --root /path/to/workspace --queue code-tasks --run-id <id> --output review.md --json
 loop-engineering code-worktree-cleanup-plan --root /path/to/workspace --queue code-tasks
 loop-engineering code-worktree-cleanup-plan --root /path/to/workspace --queue code-tasks --json
+loop-engineering code-worktree-cleanup --root /path/to/workspace --queue code-tasks --confirm-cleanup
+loop-engineering code-worktree-cleanup --root /path/to/workspace --queue code-tasks --confirm-cleanup --include-orphans --json
 ```
 
 These commands report branch, path, dirty status, verification status, diff
@@ -257,8 +260,13 @@ verification, diff, patch export status, patch verify, and apply-plan status.
 `code-worktree-cleanup-plan`
 reports missing worktrees, dirty worktrees that have not been exported, rejected
 patch exports, orphan worktree directories, and suggested cleanup commands.
-`doctor` reports the same code queue findings as warnings. They do not remove
-worktrees, checkout, stage, commit, push, merge, or change queue state.
+`code-worktree-cleanup` requires `--confirm-cleanup`, reruns the cleanup plan,
+and removes only gated candidates with `git worktree remove`. Dirty worktrees
+must have a default exported patch, passing patch verification, and an existing
+review bundle Markdown plus JSON sidecar. Orphan worktrees are skipped unless
+`--include-orphans` is supplied. `doctor` reports the same code queue findings
+as warnings. Planning commands do not remove worktrees; cleanup does not
+checkout, stage, commit, push, merge, delete branches, or change queue state.
 
 ## Operating Flow
 

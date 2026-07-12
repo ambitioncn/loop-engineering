@@ -3,6 +3,7 @@ import path from 'node:path';
 import {
   applyBreaker,
   codeWorktreeDiff,
+  codeWorktreeCleanup,
   codeWorktreeCleanupPlan,
   codeWorktreeExport,
   codeWorktreeInspect,
@@ -65,7 +66,9 @@ function parseArgs(argv) {
     else if (a === '--notify-command') args.notifyCommand = argv[++i];
     else if (a === '--include-active') args.includeActive = true;
     else if (a === '--confirm-apply') args.confirmApply = true;
+    else if (a === '--confirm-cleanup') args.confirmCleanup = true;
     else if (a === '--allow-dirty') args.allowDirty = true;
+    else if (a === '--include-orphans') args.includeOrphans = true;
     else if (a === '--json') args.json = true;
     else if (a === '--force') args.force = true;
     else if (a === '--help' || a === '-h') args.help = true;
@@ -101,6 +104,7 @@ Usage:
   loop-engineering code-patch-apply --patch runtime/loops/code-tasks/patches/task.patch --confirm-apply [--root <workspace>] [--allow-dirty] [--json]
   loop-engineering code-review-bundle --queue name [--task-id id | --run-id id] [--output review.md] [--force] [--root <workspace>] [--json]
   loop-engineering code-worktree-cleanup-plan --queue name [--limit 50] [--root <workspace>] [--json]
+  loop-engineering code-worktree-cleanup --queue name --confirm-cleanup [--limit 50] [--include-orphans] [--root <workspace>] [--json]
 
 Exit codes:
   0 success/report-only
@@ -618,6 +622,40 @@ async function codeWorktreeCleanupPlanCommand(args) {
   return 0;
 }
 
+async function codeWorktreeCleanupCommand(args) {
+  const config = await loadQueueConfig(args.root, args.config);
+  const options = mergeQueueOptions(config, args);
+  const result = await codeWorktreeCleanup(args.root, options.queue, {
+    config: options,
+    limit: args.limit,
+    confirmCleanup: args.confirmCleanup,
+    includeOrphans: args.includeOrphans
+  });
+  if (args.json) {
+    console.log(JSON.stringify(result, null, 2));
+  } else {
+    console.log(`${result.queue}: cleanup ${result.status}`);
+    console.log(`  removed worktrees: ${result.removedWorktrees.length}`);
+    console.log(`  removed orphans: ${result.removedOrphans.length}`);
+    console.log(`  skipped: ${result.skipped.length}`);
+    for (const item of result.removedWorktrees) {
+      console.log(`removed ${item.taskId ?? item.runId}`);
+      console.log(`  worktree: ${item.worktree}`);
+      console.log(`  git worktree remove: exit ${item.remove.exitCode}`);
+      if (item.branch) console.log(`  branch retained: ${item.branch}`);
+    }
+    for (const item of result.removedOrphans) {
+      console.log(`removed_orphan ${item.path}`);
+      console.log(`  git worktree remove: exit ${item.remove.exitCode}`);
+    }
+    for (const item of result.skipped) {
+      console.log(`skipped ${item.taskId ?? item.runId ?? item.path}`);
+      console.log(`  reason: ${item.reason}`);
+    }
+  }
+  return result.ok ? 0 : 1;
+}
+
 function indent(value) {
   return String(value).split('\n').filter(Boolean).map((line) => `    ${line}`).join('\n');
 }
@@ -664,6 +702,7 @@ async function main() {
   if (command === 'code-patch-apply') return codePatchApplyCommand(args);
   if (command === 'code-review-bundle') return codeReviewBundleCommand(args);
   if (command === 'code-worktree-cleanup-plan') return codeWorktreeCleanupPlanCommand(args);
+  if (command === 'code-worktree-cleanup') return codeWorktreeCleanupCommand(args);
   throw new Error(`Unknown command: ${command}`);
 }
 
