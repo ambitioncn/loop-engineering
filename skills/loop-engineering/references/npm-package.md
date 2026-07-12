@@ -1,7 +1,7 @@
 # npm Package
 
 Package name: `agent-loop-engineering`
-Version: `0.3.13`
+Version: `0.3.14`
 
 Install from npm:
 
@@ -37,6 +37,7 @@ loop-engineering code-review-bundle --root /path/to/workspace --queue <queue> --
 loop-engineering code-task-closeout --root /path/to/workspace --queue <queue> --task-id <id>
 loop-engineering code-task-autoflow --root /path/to/workspace --queue <queue> --task-id <id>
 loop-engineering code-task-autoflow --root /path/to/workspace --queue <queue> --all-actionable --until closeout
+loop-engineering code-task-finish --root /path/to/workspace --queue <queue> --task-id <id> --confirm-apply --confirm-cleanup
 loop-engineering code-task-dashboard --root /path/to/workspace --queue <queue>
 loop-engineering code-task-status --root /path/to/workspace --queue <queue>
 loop-engineering code-worktree-cleanup-plan --root /path/to/workspace --queue <queue>
@@ -53,7 +54,8 @@ worktrees.
 `code-worktree-list`, `code-worktree-inspect`, `code-worktree-diff`,
 `code-worktree-export`, `code-patch-verify`, `code-patch-apply-plan`,
 `code-patch-apply`, `code-review-bundle`, `code-task-closeout`,
-`code-task-autoflow`, `code-task-dashboard`, `code-task-status`, `code-worktree-cleanup-plan`, and
+`code-task-autoflow`, `code-task-finish`, `code-task-dashboard`,
+`code-task-status`, `code-worktree-cleanup-plan`, and
 `code-worktree-cleanup`
 are review and
 handoff commands for code queues.
@@ -68,6 +70,10 @@ cleanup, and next-action state without writing artifacts.
 Dashboards summarize queue counts, task counts, next-action counts,
 cleanup/orphan state, priority tasks, and recommended commands without writing
 artifacts.
+Finish applies one reviewed patch to the main workspace and removes that one
+reviewed worktree only after default patch, review, and closeout artifacts are
+present and both `--confirm-apply` and `--confirm-cleanup` are supplied; it
+also writes a finish artifact.
 Autoflow runs export, patch verification, apply-plan, and review generation by
 default, and can also write closeout artifacts with `--until closeout`; it skips
 existing artifacts unless `--force` is supplied. Batch autoflow with

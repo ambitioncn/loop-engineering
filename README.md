@@ -50,6 +50,7 @@ loop-engineering code-review-bundle --queue code-tasks --task-id <id>
 loop-engineering code-task-closeout --queue code-tasks --task-id <id>
 loop-engineering code-task-autoflow --queue code-tasks --task-id <id>
 loop-engineering code-task-autoflow --queue code-tasks --all-actionable --until closeout
+loop-engineering code-task-finish --queue code-tasks --task-id <id> --confirm-apply --confirm-cleanup
 loop-engineering code-task-dashboard --queue code-tasks
 loop-engineering code-task-status --queue code-tasks
 loop-engineering code-worktree-cleanup-plan --queue code-tasks
@@ -396,6 +397,21 @@ The dashboard combines queue counts, task ledger counts, next-action counts,
 cleanup/orphan summaries, priority tasks, and recommended follow-up commands.
 It is read-only and does not apply patches, remove worktrees, stage, commit,
 push, merge, delete branches, or change queue state.
+
+`v0.3.14` adds confirmation-gated single-task finish:
+
+```bash
+loop-engineering code-task-finish --queue code-tasks --task-id <taskId> --confirm-apply --confirm-cleanup
+loop-engineering code-task-finish --queue code-tasks --run-id <runId> --confirm-apply --confirm-cleanup --json
+```
+
+Finish requires default patch export/manifest, review bundle Markdown/JSON,
+closeout Markdown/JSON, a ready `code-patch-apply-plan`, and a passing cleanup
+gate. It then applies the patch to the main workspace and removes that one
+reviewed worktree, writing `runtime/loops/<queue>/finishes/<taskId>.md` plus a
+JSON sidecar. It is intentionally single-task only, requires both confirmation
+flags, and still does not stage, commit, push, merge, delete branches, or
+change queue state.
 
 ## Skill
 

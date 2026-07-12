@@ -1,6 +1,6 @@
 ---
 name: loop-engineering
-description: "Loop engineering CLI v0.3.13 with code task dashboard."
+description: "Loop engineering CLI v0.3.14 with code task finish."
 ---
 
 # Loop Engineering
@@ -48,6 +48,7 @@ loop-engineering code-review-bundle --root /path/to/workspace --queue <queue> --
 loop-engineering code-task-closeout --root /path/to/workspace --queue <queue> --task-id <id>
 loop-engineering code-task-autoflow --root /path/to/workspace --queue <queue> --task-id <id>
 loop-engineering code-task-autoflow --root /path/to/workspace --queue <queue> --all-actionable --until closeout
+loop-engineering code-task-finish --root /path/to/workspace --queue <queue> --task-id <id> --confirm-apply --confirm-cleanup
 loop-engineering code-task-dashboard --root /path/to/workspace --queue <queue>
 loop-engineering code-task-status --root /path/to/workspace --queue <queue>
 loop-engineering code-worktree-cleanup-plan --root /path/to/workspace --queue <queue>
@@ -248,6 +249,8 @@ loop-engineering code-task-closeout --root /path/to/workspace --queue code-tasks
 loop-engineering code-task-autoflow --root /path/to/workspace --queue code-tasks --task-id <id>
 loop-engineering code-task-autoflow --root /path/to/workspace --queue code-tasks --run-id <id> --until closeout --json
 loop-engineering code-task-autoflow --root /path/to/workspace --queue code-tasks --all-actionable --until closeout --json
+loop-engineering code-task-finish --root /path/to/workspace --queue code-tasks --task-id <id> --confirm-apply --confirm-cleanup
+loop-engineering code-task-finish --root /path/to/workspace --queue code-tasks --run-id <id> --confirm-apply --confirm-cleanup --json
 loop-engineering code-task-dashboard --root /path/to/workspace --queue code-tasks
 loop-engineering code-task-dashboard --root /path/to/workspace --queue code-tasks --json
 loop-engineering code-task-status --root /path/to/workspace --queue code-tasks
@@ -295,8 +298,14 @@ counts, and next recommended commands. Planning, status, and closeout commands
 do not remove worktrees. `code-task-dashboard` is a read-only queue dashboard
 that combines queue counts, task ledger counts, action counts, cleanup/orphan
 summaries, priority tasks, and recommended follow-up commands. Autoflow does
-not apply patches, remove worktrees, or change queue state. Cleanup does not
-checkout, stage, commit, push, merge, delete branches, or change queue state.
+not apply patches, remove worktrees, or change queue state. `code-task-finish`
+is a single-task, confirmation-gated landing command: it requires default patch,
+review, and closeout artifacts, verifies the apply plan and cleanup gate,
+applies the patch to the main workspace, removes that one reviewed worktree,
+and writes a finish artifact. It intentionally has no batch mode and does not
+stage, commit, push, merge, delete branches, or change queue state. Cleanup
+does not checkout, stage, commit, push, merge, delete branches, or change queue
+state.
 
 ## Operating Flow
 

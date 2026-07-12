@@ -16,6 +16,7 @@ import {
   codeTaskAutoflowBatch,
   codeTaskCloseout,
   codeTaskDashboard,
+  codeTaskFinish,
   codeTaskStatus,
   configFilesFromArgs,
   doctorReport,
@@ -115,6 +116,7 @@ Usage:
   loop-engineering code-review-bundle --queue name [--task-id id | --run-id id] [--output review.md] [--force] [--root <workspace>] [--json]
   loop-engineering code-task-closeout --queue name [--task-id id | --run-id id] [--output closeout.md] [--force] [--root <workspace>] [--json]
   loop-engineering code-task-autoflow --queue name [--task-id id | --run-id id | --all-actionable] [--until review|closeout] [--force] [--root <workspace>] [--json]
+  loop-engineering code-task-finish --queue name [--task-id id | --run-id id] --confirm-apply --confirm-cleanup [--force] [--root <workspace>] [--json]
   loop-engineering code-task-dashboard --queue name [--limit 20] [--root <workspace>] [--json]
   loop-engineering code-task-status --queue name [--task-id id | --run-id id] [--limit 20] [--root <workspace>] [--json]
   loop-engineering code-worktree-cleanup-plan --queue name [--limit 50] [--root <workspace>] [--json]
@@ -699,6 +701,44 @@ async function codeTaskAutoflowCommand(args) {
   return result.ok ? 0 : 1;
 }
 
+async function codeTaskFinishCommand(args) {
+  const config = await loadQueueConfig(args.root, args.config);
+  const options = mergeQueueOptions(config, args);
+  const result = await codeTaskFinish(args.root, options.queue, {
+    config: options,
+    taskId: args.taskId,
+    runId: args.runId,
+    limit: args.limit,
+    output: args.output,
+    force: args.force,
+    timeoutMs: args.timeoutMs,
+    allowDirty: args.allowDirty,
+    confirmApply: args.confirmApply,
+    confirmCleanup: args.confirmCleanup
+  });
+  if (args.json) {
+    console.log(JSON.stringify(result, null, 2));
+  } else {
+    console.log(`${result.queue}: finish ${result.status}`);
+    console.log(`  task: ${result.taskId ?? result.runId}`);
+    console.log(`  finish: ${result.finishFile}`);
+    console.log(`  json: ${result.jsonFile}`);
+    console.log(`  patch applied: ${result.patchApply?.applied ? 'yes' : 'no'}`);
+    console.log(`  worktree cleaned: ${result.cleanup?.removed ? 'yes' : 'no'}`);
+    if (result.cleanup?.branch) console.log(`  branch retained: ${result.cleanup.branch}`);
+    console.log('  safety: no stage, commit, push, merge, branch delete, or queue state changes');
+    for (const step of result.steps) {
+      const reason = step.reason ? ` (${step.reason})` : '';
+      console.log(`  ${step.name}: ${step.status}${reason}`);
+    }
+    if (result.errors.length > 0) {
+      console.log(`  errors: ${result.errors.length}`);
+      for (const error of result.errors) console.log(`    ${error.step}: ${error.message}`);
+    }
+  }
+  return result.ok ? 0 : 1;
+}
+
 async function codeTaskStatusCommand(args) {
   const config = await loadQueueConfig(args.root, args.config);
   const options = mergeQueueOptions(config, args);
@@ -882,6 +922,7 @@ async function main() {
   if (command === 'code-review-bundle') return codeReviewBundleCommand(args);
   if (command === 'code-task-closeout') return codeTaskCloseoutCommand(args);
   if (command === 'code-task-autoflow') return codeTaskAutoflowCommand(args);
+  if (command === 'code-task-finish') return codeTaskFinishCommand(args);
   if (command === 'code-task-dashboard') return codeTaskDashboardCommand(args);
   if (command === 'code-task-status') return codeTaskStatusCommand(args);
   if (command === 'code-worktree-cleanup-plan') return codeWorktreeCleanupPlanCommand(args);
