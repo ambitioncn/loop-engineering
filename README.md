@@ -42,6 +42,7 @@ loop-engineering queue-requeue --queue agent-tasks --task-id <id>
 loop-engineering code-worktree-list --queue code-tasks
 loop-engineering code-worktree-inspect --queue code-tasks --task-id <id>
 loop-engineering code-worktree-diff --queue code-tasks --task-id <id>
+loop-engineering code-worktree-export --queue code-tasks --task-id <id>
 ```
 
 Artifacts are written to:
@@ -238,6 +239,18 @@ It resolves the worktree from the run artifact, keeps the path inside the
 workspace root, then prints `git diff --stat HEAD`, `git diff --name-status
 HEAD`, `git diff --binary HEAD`, and untracked file names. It does not stage,
 commit, push, merge, delete, or checkout anything.
+
+`v0.3.3` adds patch export artifacts:
+
+```bash
+loop-engineering code-worktree-export --queue code-tasks --task-id <id>
+loop-engineering code-worktree-export --queue code-tasks --run-id <id> --output review.patch --json
+```
+
+By default it writes `runtime/loops/<queue>/patches/<taskId>.patch` plus a
+`.json` manifest containing source run, worktree, diff summary, and untracked
+file names. It refuses to overwrite existing exports unless `--force` is set
+and does not change git or queue state.
 
 ## Skill
 

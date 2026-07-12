@@ -3,6 +3,7 @@ import path from 'node:path';
 import {
   applyBreaker,
   codeWorktreeDiff,
+  codeWorktreeExport,
   codeWorktreeInspect,
   codeWorktreeList,
   configFilesFromArgs,
@@ -52,6 +53,7 @@ function parseArgs(argv) {
     else if (a === '--retry-exit-codes') args.retryExitCodes = argv[++i].split(',').filter(Boolean).map((v) => Number.parseInt(v, 10));
     else if (a === '--task-id') args.taskId = argv[++i];
     else if (a === '--run-id') args.runId = argv[++i];
+    else if (a === '--output') args.output = argv[++i];
     else if (a === '--reason') args.reason = argv[++i];
     else if (a === '--limit') args.limit = Number.parseInt(argv[++i], 10);
     else if (a === '--notify-command') args.notifyCommand = argv[++i];
@@ -85,6 +87,7 @@ Usage:
   loop-engineering code-worktree-list --queue name [--limit 20] [--root <workspace>] [--json]
   loop-engineering code-worktree-inspect --queue name [--task-id id | --run-id id] [--root <workspace>] [--json]
   loop-engineering code-worktree-diff --queue name [--task-id id | --run-id id] [--root <workspace>] [--json]
+  loop-engineering code-worktree-export --queue name [--task-id id | --run-id id] [--output file.patch] [--force] [--root <workspace>] [--json]
 
 Exit codes:
   0 success/report-only
@@ -452,6 +455,28 @@ async function codeWorktreeDiffCommand(args) {
   return 0;
 }
 
+async function codeWorktreeExportCommand(args) {
+  const config = await loadQueueConfig(args.root, args.config);
+  const options = mergeQueueOptions(config, args);
+  const result = await codeWorktreeExport(args.root, options.queue, {
+    taskId: args.taskId,
+    runId: args.runId,
+    limit: args.limit,
+    output: args.output,
+    force: args.force
+  });
+  if (args.json) {
+    console.log(JSON.stringify(result, null, 2));
+  } else {
+    console.log(`${result.status} ${result.taskId}`);
+    console.log(`  patch: ${result.patchFile}`);
+    console.log(`  manifest: ${result.manifestFile}`);
+    console.log(`  bytes: ${result.patchBytes}`);
+    if (result.untracked) console.log(`  untracked:\n${indent(result.untracked)}`);
+  }
+  return 0;
+}
+
 function indent(value) {
   return String(value).split('\n').filter(Boolean).map((line) => `    ${line}`).join('\n');
 }
@@ -492,6 +517,7 @@ async function main() {
   if (command === 'code-worktree-list') return codeWorktreeListCommand(args);
   if (command === 'code-worktree-inspect') return codeWorktreeInspectCommand(args);
   if (command === 'code-worktree-diff') return codeWorktreeDiffCommand(args);
+  if (command === 'code-worktree-export') return codeWorktreeExportCommand(args);
   throw new Error(`Unknown command: ${command}`);
 }
 

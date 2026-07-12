@@ -101,6 +101,19 @@ inside the workspace root, and prints `git diff --stat HEAD`, `git diff
 --name-status HEAD`, `git diff --binary HEAD`, and untracked file names. It
 does not checkout, stage, commit, push, merge, delete, or modify queue state.
 
+`v0.3.3` adds durable patch export artifacts:
+
+```bash
+loop-engineering code-worktree-export --queue code-tasks --task-id <id>
+loop-engineering code-worktree-export --queue code-tasks --run-id <id> --output review.patch --json
+```
+
+The command writes a patch file plus JSON manifest for the recorded worktree.
+By default the files go under `runtime/loops/<queue>/patches/`, and existing
+exports are not overwritten unless `--force` is set. This gives humans and
+follow-up tools a stable review artifact while still avoiding checkout, stage,
+commit, push, merge, deletion, or queue-state changes.
+
 ## Artifacts
 
 Loop specs store state and runs under the target workspace:
