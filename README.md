@@ -39,6 +39,8 @@ loop-engineering queue-status --queue agent-tasks
 loop-engineering queue-peek --queue agent-tasks
 loop-engineering queue-cancel --queue agent-tasks --task-id <id> --reason "not needed"
 loop-engineering queue-requeue --queue agent-tasks --task-id <id>
+loop-engineering code-worktree-list --queue code-tasks
+loop-engineering code-worktree-inspect --queue code-tasks --task-id <id>
 ```
 
 Artifacts are written to:
@@ -211,6 +213,18 @@ LOOP_WORKTREE_BRANCH
 
 The runner deliberately does not push, merge, or delete worktrees. Treat the
 artifact as a prepared patch workspace for review.
+
+`v0.3.1` adds read-only worktree artifact inspection:
+
+```bash
+loop-engineering code-worktree-list --queue code-tasks
+loop-engineering code-worktree-inspect --queue code-tasks --task-id <id>
+loop-engineering code-worktree-inspect --queue code-tasks --run-id <id> --json
+```
+
+These commands read queue run artifacts and report branch, path, dirty status,
+verification status, diff summaries, and untracked files. They do not remove
+worktrees or change git state.
 
 ## Skill
 

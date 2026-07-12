@@ -78,6 +78,17 @@ When `worktree.enabled` is true, the runner:
 This keeps code-changing work reviewable without giving the loop authority to
 ship changes.
 
+`v0.3.1` adds read-only worktree artifact inspection:
+
+```bash
+loop-engineering code-worktree-list --queue code-tasks
+loop-engineering code-worktree-inspect --queue code-tasks --task-id <id>
+```
+
+These commands summarize the recorded branch, path, dirty state, verification
+status, diff summaries, and untracked files. They do not remove worktrees or
+change git state.
+
 ## Artifacts
 
 Loop specs store state and runs under the target workspace:

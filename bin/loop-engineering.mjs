@@ -2,6 +2,8 @@
 import path from 'node:path';
 import {
   applyBreaker,
+  codeWorktreeInspect,
+  codeWorktreeList,
   configFilesFromArgs,
   doctorReport,
   initCodeQueueConfig,
@@ -48,6 +50,7 @@ function parseArgs(argv) {
     else if (a === '--retry-delay-ms') args.retryDelayMs = Number.parseInt(argv[++i], 10);
     else if (a === '--retry-exit-codes') args.retryExitCodes = argv[++i].split(',').filter(Boolean).map((v) => Number.parseInt(v, 10));
     else if (a === '--task-id') args.taskId = argv[++i];
+    else if (a === '--run-id') args.runId = argv[++i];
     else if (a === '--reason') args.reason = argv[++i];
     else if (a === '--limit') args.limit = Number.parseInt(argv[++i], 10);
     else if (a === '--notify-command') args.notifyCommand = argv[++i];
@@ -78,6 +81,8 @@ Usage:
   loop-engineering queue-peek --queue name [--root <workspace>] [--json]
   loop-engineering queue-cancel --queue name --task-id id [--reason "..."] [--root <workspace>]
   loop-engineering queue-requeue --queue name --task-id id [--root <workspace>]
+  loop-engineering code-worktree-list --queue name [--limit 20] [--root <workspace>] [--json]
+  loop-engineering code-worktree-inspect --queue name [--task-id id | --run-id id] [--root <workspace>] [--json]
 
 Exit codes:
   0 success/report-only
@@ -373,6 +378,58 @@ async function queueRequeueCommand(args) {
   return 0;
 }
 
+async function codeWorktreeListCommand(args) {
+  const config = await loadQueueConfig(args.root, args.config);
+  const options = mergeQueueOptions(config, args);
+  const result = await codeWorktreeList(args.root, options.queue, { limit: args.limit });
+  if (args.json) {
+    console.log(JSON.stringify(result, null, 2));
+  } else if (result.worktrees.length === 0) {
+    console.log(`${result.queue}: no code worktree artifacts found`);
+  } else {
+    for (const item of result.worktrees) {
+      console.log(`${item.status} ${item.taskId}`);
+      console.log(`  branch: ${item.worktree?.branch ?? 'none'}`);
+      console.log(`  path: ${item.worktree?.path ?? 'none'}`);
+      console.log(`  dirty: ${item.worktree?.dirty ? 'yes' : 'no'}`);
+      console.log(`  verify: ${item.verifyOk ? 'ok' : 'fail'}`);
+      console.log(`  run: ${item.file}`);
+    }
+  }
+  return 0;
+}
+
+async function codeWorktreeInspectCommand(args) {
+  const config = await loadQueueConfig(args.root, args.config);
+  const options = mergeQueueOptions(config, args);
+  const result = await codeWorktreeInspect(args.root, options.queue, {
+    taskId: args.taskId,
+    runId: args.runId,
+    limit: args.limit
+  });
+  if (args.json) {
+    console.log(JSON.stringify(result, null, 2));
+  } else {
+    console.log(`${result.status} ${result.taskId}`);
+    console.log(`  title: ${result.title ?? ''}`);
+    console.log(`  branch: ${result.worktree?.branch ?? 'none'}`);
+    console.log(`  path: ${result.worktree?.path ?? 'none'}`);
+    console.log(`  head: ${result.worktree?.head ?? 'none'}`);
+    console.log(`  dirty: ${result.worktree?.dirty ? 'yes' : 'no'}`);
+    console.log(`  verify: ${result.verifyOk ? 'ok' : 'fail'}`);
+    if (result.worktree?.statusShort) console.log(`  status:\n${indent(result.worktree.statusShort)}`);
+    if (result.worktree?.diffStat) console.log(`  diff stat:\n${indent(result.worktree.diffStat)}`);
+    if (result.worktree?.diffNameStatus) console.log(`  diff names:\n${indent(result.worktree.diffNameStatus)}`);
+    if (result.worktree?.untracked) console.log(`  untracked:\n${indent(result.worktree.untracked)}`);
+    console.log(`  run: ${result.file}`);
+  }
+  return 0;
+}
+
+function indent(value) {
+  return String(value).split('\n').filter(Boolean).map((line) => `    ${line}`).join('\n');
+}
+
 function buildRetryArgs(args, existing) {
   if (args.maxAttempts === undefined && args.retryDelayMs === undefined && args.retryExitCodes === undefined) {
     return existing;
@@ -406,6 +463,8 @@ async function main() {
   if (command === 'queue-peek') return queuePeekCommand(args);
   if (command === 'queue-cancel') return queueCancelCommand(args);
   if (command === 'queue-requeue') return queueRequeueCommand(args);
+  if (command === 'code-worktree-list') return codeWorktreeListCommand(args);
+  if (command === 'code-worktree-inspect') return codeWorktreeInspectCommand(args);
   throw new Error(`Unknown command: ${command}`);
 }
 

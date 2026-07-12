@@ -37,6 +37,8 @@ loop-engineering queue-peek --root /path/to/workspace --queue <queue>
 loop-engineering queue-cancel --root /path/to/workspace --queue <queue> --task-id <id>
 loop-engineering queue-requeue --root /path/to/workspace --queue <queue> --task-id <id>
 loop-engineering code-queue-init --root /path/to/workspace --queue <queue>
+loop-engineering code-worktree-list --root /path/to/workspace --queue <queue>
+loop-engineering code-worktree-inspect --root /path/to/workspace --queue <queue> --task-id <id>
 ```
 
 If the package is not installed but exists in the workspace, use:
@@ -211,6 +213,18 @@ run artifact, plus untracked file names.
 
 The dispatcher receives the normal queue environment plus `LOOP_ROOT`,
 `LOOP_WORKTREE_PATH`, `LOOP_WORKTREE_PATH_REL`, and `LOOP_WORKTREE_BRANCH`.
+
+Inspect code worktree artifacts without changing git state:
+
+```bash
+loop-engineering code-worktree-list --root /path/to/workspace --queue code-tasks
+loop-engineering code-worktree-inspect --root /path/to/workspace --queue code-tasks --task-id <id>
+loop-engineering code-worktree-inspect --root /path/to/workspace --queue code-tasks --run-id <id> --json
+```
+
+These commands report branch, path, dirty status, verification status, diff
+summaries, and untracked files from queue run artifacts. They do not remove
+worktrees or change git state.
 
 ## Operating Flow
 
