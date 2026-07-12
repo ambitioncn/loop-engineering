@@ -48,6 +48,7 @@ loop-engineering code-patch-apply-plan --patch runtime/loops/code-tasks/patches/
 loop-engineering code-patch-apply --patch runtime/loops/code-tasks/patches/<id>.patch --confirm-apply
 loop-engineering code-review-bundle --queue code-tasks --task-id <id>
 loop-engineering code-task-closeout --queue code-tasks --task-id <id>
+loop-engineering code-task-status --queue code-tasks
 loop-engineering code-worktree-cleanup-plan --queue code-tasks
 loop-engineering code-worktree-cleanup --queue code-tasks --confirm-cleanup
 ```
@@ -340,6 +341,19 @@ state when present, patch export/verify/apply-plan status, review bundle
 presence, cleanup recommendation, and remaining next actions. It refuses to
 overwrite unless `--force` is set and does not apply patches, remove worktrees,
 stage, commit, push, merge, delete branches, or change queue state.
+
+`v0.3.10` adds a task-level status ledger:
+
+```bash
+loop-engineering code-task-status --queue code-tasks
+loop-engineering code-task-status --queue code-tasks --task-id <taskId> --json
+```
+
+It reads recent code queue run artifacts and reports each task's queue state,
+worktree existence, patch export and verification status, review bundle
+presence, closeout status, cleanup recommendation, aggregate counts, and next
+recommended commands. It is read-only and does not apply patches, remove
+worktrees, stage, commit, push, merge, delete branches, or change queue state.
 
 ## Skill
 

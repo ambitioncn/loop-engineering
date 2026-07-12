@@ -13,6 +13,7 @@ import {
   codePatchVerify,
   codeReviewBundle,
   codeTaskCloseout,
+  codeTaskStatus,
   configFilesFromArgs,
   doctorReport,
   initCodeQueueConfig,
@@ -105,6 +106,7 @@ Usage:
   loop-engineering code-patch-apply --patch runtime/loops/code-tasks/patches/task.patch --confirm-apply [--root <workspace>] [--allow-dirty] [--json]
   loop-engineering code-review-bundle --queue name [--task-id id | --run-id id] [--output review.md] [--force] [--root <workspace>] [--json]
   loop-engineering code-task-closeout --queue name [--task-id id | --run-id id] [--output closeout.md] [--force] [--root <workspace>] [--json]
+  loop-engineering code-task-status --queue name [--task-id id | --run-id id] [--limit 20] [--root <workspace>] [--json]
   loop-engineering code-worktree-cleanup-plan --queue name [--limit 50] [--root <workspace>] [--json]
   loop-engineering code-worktree-cleanup --queue name --confirm-cleanup [--limit 50] [--include-orphans] [--root <workspace>] [--json]
 
@@ -629,6 +631,42 @@ async function codeTaskCloseoutCommand(args) {
   return 0;
 }
 
+async function codeTaskStatusCommand(args) {
+  const config = await loadQueueConfig(args.root, args.config);
+  const options = mergeQueueOptions(config, args);
+  const result = await codeTaskStatus(args.root, options.queue, {
+    config: options,
+    taskId: args.taskId,
+    runId: args.runId,
+    limit: args.limit
+  });
+  if (args.json) {
+    console.log(JSON.stringify(result, null, 2));
+  } else if (result.tasks.length === 0) {
+    console.log(`${result.queue}: no code task artifacts found`);
+  } else {
+    console.log(`${result.queue}: code task status`);
+    console.log(`  tasks: ${result.tasks.length}`);
+    console.log(`  counts: ${Object.entries(result.counts).map(([key, value]) => `${key}=${value}`).join(', ') || 'none'}`);
+    for (const task of result.tasks) {
+      console.log(`${task.overallStatus} ${task.taskId ?? task.runId}`);
+      console.log(`  title: ${task.title ?? ''}`);
+      console.log(`  task state: ${task.taskState ?? 'unknown'}`);
+      console.log(`  worktree: ${task.worktree.exists ? 'exists' : 'missing'} ${task.worktree.path ?? 'none'}`);
+      console.log(`  patch: ${task.patch.exists ? 'exists' : 'missing'} ${task.patch.verifyStatus ?? 'not_run'}`);
+      console.log(`  review: ${task.review.exists ? 'exists' : 'missing'}`);
+      console.log(`  closeout: ${task.closeout.exists ? task.closeout.status ?? 'exists' : 'missing'}`);
+      console.log(`  cleanup: ${task.cleanup.recommendation ?? 'unknown'}`);
+      if (task.nextActions.length > 0) {
+        console.log('  next actions:');
+        for (const action of task.nextActions) console.log(`    - ${action}`);
+      }
+      console.log(`  run: ${task.sourceRunFile}`);
+    }
+  }
+  return 0;
+}
+
 async function codeWorktreeCleanupPlanCommand(args) {
   const config = await loadQueueConfig(args.root, args.config);
   const options = mergeQueueOptions(config, args);
@@ -740,6 +778,7 @@ async function main() {
   if (command === 'code-patch-apply') return codePatchApplyCommand(args);
   if (command === 'code-review-bundle') return codeReviewBundleCommand(args);
   if (command === 'code-task-closeout') return codeTaskCloseoutCommand(args);
+  if (command === 'code-task-status') return codeTaskStatusCommand(args);
   if (command === 'code-worktree-cleanup-plan') return codeWorktreeCleanupPlanCommand(args);
   if (command === 'code-worktree-cleanup') return codeWorktreeCleanupCommand(args);
   throw new Error(`Unknown command: ${command}`);
