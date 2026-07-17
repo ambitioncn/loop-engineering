@@ -32,6 +32,82 @@ bounded `L2` mode through `worktree.enabled`: it creates local worktrees and
 records evidence, but it does not push, merge, delete worktrees, or perform
 external writes.
 
+## Dev / Acceptance Split
+
+The next queue architecture for non-trivial tasks is a two-team loop:
+
+```text
+Task intake
+  -> task contract
+  -> acceptance plan + development plan
+  -> development checkpoint
+  -> acceptance review
+  -> development revision
+  -> final judge
+  -> report / gate / apply
+```
+
+Development owns implementation and local evidence. Acceptance owns proof:
+functional checks, regression checks, edge cases, negative tests, manual review,
+and automation suggestions. The final judge is separate from both and verifies
+that the result still matches the original task contract and risk gates.
+
+The important artifact names are:
+
+```text
+task_contract.json
+acceptance_plan.json
+dev_plan.json
+checkpoint_review.json
+final_judgement.json
+```
+
+This model should fit on top of the current queue runner rather than replace
+it. The queue still owns leases, preflight, active/done/failed state, and run
+artifacts; the task subdirectory owns multi-round collaboration evidence.
+
+`v0.4` starts with deterministic planning artifacts. `run-queue` writes
+`runtime/loops/<queue>/tasks/<task_id>/task_contract.json`,
+`acceptance_plan.json`, `dev_plan.json`, `checkpoints/`, and `reviews/` before
+preflight and dispatch, then writes `final_judgement.json` after acceptance
+review and `revision_request.json` when the final judgement needs another
+development pass. It exposes the planning directories to the dispatcher as
+`LOOP_TASK_CONTRACT_FILE`, `LOOP_ACCEPTANCE_PLAN_FILE`, `LOOP_DEV_PLAN_FILE`,
+`LOOP_CHECKPOINTS_DIR`, and `LOOP_REVIEWS_DIR`, then records the contract path,
+inferred risk level, human-gate flag, acceptance plan path, check counts, dev
+plan path, planned checkpoint count, produced checkpoint files, and acceptance
+review files, final judgement outcome, and revision request summary in the run
+artifact. A completed dispatch whose acceptance review still needs changes is
+marked `needs_revision` instead of completed.
+
+`queue-revision-next` turns a failed `needs_revision` task into a fresh queued
+revision task using `revision_request.json`. It preserves the failed source
+task and run artifacts, then embeds the revision goals and next checkpoint id
+in the new task body.
+
+`queue-lineage` is the read-only attempt graph view. It can start from any task
+in the chain and returns the root task id, current path, revision edges, known
+attempts, checkpoint/review summaries, final judgement outcomes, and revision
+request status. Every queue run artifact also embeds the same lineage summary
+after the task is moved to its final state.
+
+`queue-lineage-bundle` renders that attempt graph into a Markdown human review
+bundle and JSON sidecar under `runtime/loops/<queue>/lineage-bundles/`. The
+bundle is intended for handoff: it summarizes what changed in each round, why
+acceptance failed, how the next round was requested, and whether the latest
+round is ready for human review.
+
+`queue-human-decision` is the explicit human gate. It records `approve`,
+`request_changes`, or `reject` in
+`runtime/loops/<queue>/tasks/<task_id>/human_review_decision.json`. When the
+decision is `request_changes`, it also writes `human_revision_request.json`
+with the human feedback converted into revision goals. `queue-revision-next`
+can use that human request to create the next round, so mid-project feedback is
+tracked as first-class lineage rather than lost in chat. The dispatcher also
+receives `LOOP_HUMAN_REVIEW_DECISION_FILE` and
+`LOOP_HUMAN_REVISION_REQUEST_FILE`, so long-running development agents can
+poll for human feedback while the task is still active.
+
 ## Queue Runner
 
 `v0.2.0` added a durable queue for explicit loop-managed task handoffs:

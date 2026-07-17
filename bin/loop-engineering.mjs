@@ -34,7 +34,11 @@ import {
   nextState,
   enqueueTask,
   queueCancel,
+  queueHumanDecision,
+  queueLineage,
+  queueLineageBundle,
   queuePeek,
+  queueRevisionNext,
   queueRequeue,
   queueStatus,
   summarizeLoopRuns,
@@ -73,10 +77,14 @@ function parseArgs(argv) {
     else if (a === '--patch') args.patch = argv[++i];
     else if (a === '--until') args.until = argv[++i];
     else if (a === '--reason') args.reason = argv[++i];
+    else if (a === '--decision') args.decision = argv[++i];
+    else if (a === '--comment') args.comment = argv[++i];
+    else if (a === '--reviewer') args.reviewer = argv[++i];
     else if (a === '--limit') args.limit = Number.parseInt(argv[++i], 10);
     else if (a === '--notify-command') args.notifyCommand = argv[++i];
     else if (a === '--include-active') args.includeActive = true;
     else if (a === '--all-actionable') args.allActionable = true;
+    else if (a === '--enqueue-revision') args.enqueueRevision = true;
     else if (a === '--confirm-apply') args.confirmApply = true;
     else if (a === '--confirm-cleanup') args.confirmCleanup = true;
     else if (a === '--allow-dirty') args.allowDirty = true;
@@ -107,6 +115,10 @@ Usage:
   loop-engineering queue-peek --queue name [--root <workspace>] [--json]
   loop-engineering queue-cancel --queue name --task-id id [--reason "..."] [--root <workspace>]
   loop-engineering queue-requeue --queue name --task-id id [--root <workspace>]
+  loop-engineering queue-revision-next --queue name --task-id id [--title "Title"] [--task "Body"] [--root <workspace>] [--json]
+  loop-engineering queue-lineage --queue name --task-id id [--root <workspace>] [--json]
+  loop-engineering queue-lineage-bundle --queue name --task-id id [--output review.md] [--force] [--root <workspace>] [--json]
+  loop-engineering queue-human-decision --queue name --task-id id --decision approve|request_changes|reject [--comment "..."] [--enqueue-revision] [--force] [--root <workspace>] [--json]
   loop-engineering code-worktree-list --queue name [--limit 20] [--root <workspace>] [--json]
   loop-engineering code-worktree-inspect --queue name [--task-id id | --run-id id] [--root <workspace>] [--json]
   loop-engineering code-worktree-diff --queue name [--task-id id | --run-id id] [--root <workspace>] [--json]
@@ -415,6 +427,100 @@ async function queueRequeueCommand(args) {
   const result = await queueRequeue(args.root, options.queue, args.taskId);
   if (args.json) console.log(JSON.stringify(result, null, 2));
   else console.log(`requeued ${result.taskId}: ${result.file}`);
+  return 0;
+}
+
+async function queueRevisionNextCommand(args) {
+  if (!args.taskId) throw new Error('queue-revision-next requires --task-id.');
+  const config = await loadQueueConfig(args.root, args.config);
+  const options = mergeQueueOptions(config, args);
+  const result = await queueRevisionNext(args.root, options.queue, args.taskId, {
+    title: args.title,
+    task: args.task
+  });
+  if (args.json) {
+    console.log(JSON.stringify(result, null, 2));
+  } else {
+    console.log(`queued revision ${result.nextTask.id}: ${result.file}`);
+    console.log(`  source task: ${result.sourceTaskId}`);
+    console.log(`  revision request: ${result.revisionRequest}`);
+  }
+  return 0;
+}
+
+async function queueLineageCommand(args) {
+  if (!args.taskId) throw new Error('queue-lineage requires --task-id.');
+  const config = await loadQueueConfig(args.root, args.config);
+  const options = mergeQueueOptions(config, args);
+  const result = await queueLineage(args.root, options.queue, args.taskId);
+  if (args.json) {
+    console.log(JSON.stringify(result, null, 2));
+  } else {
+    console.log(`${result.queue}: lineage ${result.rootTaskId} (${result.totalKnownAttempts} attempt${result.totalKnownAttempts === 1 ? '' : 's'})`);
+    console.log(`  requested: ${result.requestedTaskId}`);
+    console.log(`  path: ${result.currentPath.join(' -> ')}`);
+    for (const attempt of result.attempts) {
+      const judgement = attempt.run?.finalJudgement?.outcome ?? 'no-judgement';
+      const checkpoint = attempt.revisionNextCheckpoint ? ` next=${attempt.revisionNextCheckpoint}` : '';
+      console.log(`  - r${attempt.revisionRound} ${attempt.taskId} [${attempt.location}/${attempt.status ?? 'unknown'}] ${judgement}${checkpoint}`);
+      if (attempt.run?.revisionRequest?.path) {
+        console.log(`    revision_request: ${attempt.run.revisionRequest.path}`);
+      }
+      if (attempt.run?.path) {
+        console.log(`    run: ${attempt.run.path}`);
+      }
+    }
+  }
+  return 0;
+}
+
+async function queueLineageBundleCommand(args) {
+  if (!args.taskId) throw new Error('queue-lineage-bundle requires --task-id.');
+  const config = await loadQueueConfig(args.root, args.config);
+  const options = mergeQueueOptions(config, args);
+  const result = await queueLineageBundle(args.root, options.queue, args.taskId, {
+    output: args.output,
+    force: args.force
+  });
+  if (args.json) {
+    const { markdown: _markdown, ...json } = result;
+    console.log(JSON.stringify(json, null, 2));
+  } else {
+    console.log(`${result.queue}: lineage review bundle`);
+    console.log(`  root task: ${result.rootTaskId}`);
+    console.log(`  requested: ${result.requestedTaskId}`);
+    console.log(`  attempts: ${result.totalKnownAttempts}`);
+    console.log(`  verdict: ${result.verdict}`);
+    console.log(`  bundle: ${result.bundleFile}`);
+    console.log(`  json: ${result.jsonFile}`);
+  }
+  return 0;
+}
+
+async function queueHumanDecisionCommand(args) {
+  if (!args.taskId) throw new Error('queue-human-decision requires --task-id.');
+  if (!args.decision) throw new Error('queue-human-decision requires --decision.');
+  const config = await loadQueueConfig(args.root, args.config);
+  const options = mergeQueueOptions(config, args);
+  const result = await queueHumanDecision(args.root, options.queue, args.taskId, {
+    decision: args.decision,
+    comment: args.comment,
+    reason: args.reason,
+    reviewer: args.reviewer,
+    force: args.force,
+    enqueueRevision: args.enqueueRevision,
+    title: args.title,
+    task: args.task
+  });
+  if (args.json) {
+    console.log(JSON.stringify(result, null, 2));
+  } else {
+    console.log(`${result.queue}: human decision ${result.decision}`);
+    console.log(`  task: ${result.taskId}`);
+    console.log(`  decision: ${result.decisionFile}`);
+    if (result.revisionRequestFile) console.log(`  revision request: ${result.revisionRequestFile}`);
+    if (result.revisionNext) console.log(`  queued revision: ${result.revisionNext.nextTask.id} (${result.revisionNext.file})`);
+  }
   return 0;
 }
 
@@ -954,6 +1060,10 @@ async function main() {
   if (command === 'queue-peek') return queuePeekCommand(args);
   if (command === 'queue-cancel') return queueCancelCommand(args);
   if (command === 'queue-requeue') return queueRequeueCommand(args);
+  if (command === 'queue-revision-next') return queueRevisionNextCommand(args);
+  if (command === 'queue-lineage') return queueLineageCommand(args);
+  if (command === 'queue-lineage-bundle') return queueLineageBundleCommand(args);
+  if (command === 'queue-human-decision') return queueHumanDecisionCommand(args);
   if (command === 'code-worktree-list') return codeWorktreeListCommand(args);
   if (command === 'code-worktree-inspect') return codeWorktreeInspectCommand(args);
   if (command === 'code-worktree-diff') return codeWorktreeDiffCommand(args);

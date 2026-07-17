@@ -39,6 +39,10 @@ loop-engineering queue-status --queue agent-tasks
 loop-engineering queue-peek --queue agent-tasks
 loop-engineering queue-cancel --queue agent-tasks --task-id <id> --reason "not needed"
 loop-engineering queue-requeue --queue agent-tasks --task-id <id>
+loop-engineering queue-revision-next --queue agent-tasks --task-id <id>
+loop-engineering queue-lineage --queue agent-tasks --task-id <id>
+loop-engineering queue-lineage-bundle --queue agent-tasks --task-id <id>
+loop-engineering queue-human-decision --queue agent-tasks --task-id <id> --decision approve|request_changes|reject
 loop-engineering code-worktree-list --queue code-tasks
 loop-engineering code-worktree-inspect --queue code-tasks --task-id <id>
 loop-engineering code-worktree-diff --queue code-tasks --task-id <id>
@@ -155,10 +159,57 @@ LOOP_TASK_TITLE
 LOOP_TASK_BODY
 LOOP_TASK_FILE
 LOOP_TASK_FILE_REL
+LOOP_TASK_RUNTIME_DIR
+LOOP_TASK_RUNTIME_DIR_REL
+LOOP_TASK_CONTRACT_FILE
+LOOP_TASK_CONTRACT_FILE_REL
+LOOP_ACCEPTANCE_PLAN_FILE
+LOOP_ACCEPTANCE_PLAN_FILE_REL
+LOOP_DEV_PLAN_FILE
+LOOP_DEV_PLAN_FILE_REL
+LOOP_CHECKPOINTS_DIR
+LOOP_CHECKPOINTS_DIR_REL
+LOOP_REVIEWS_DIR
+LOOP_REVIEWS_DIR_REL
+LOOP_HUMAN_REVIEW_DECISION_FILE
+LOOP_HUMAN_REVIEW_DECISION_FILE_REL
+LOOP_HUMAN_REVISION_REQUEST_FILE
+LOOP_HUMAN_REVISION_REQUEST_FILE_REL
 LOOP_RUN_ID
 LOOP_ATTEMPT
 LOOP_MAX_ATTEMPTS
 ```
+
+Before dispatch, `run-queue` writes planning artifacts under
+`runtime/loops/<queue>/tasks/<task_id>/`: `task_contract.json`,
+`acceptance_plan.json`, `dev_plan.json`, `checkpoints/`, `reviews/`, and
+`final_judgement.json`; when acceptance requires more work, it also writes
+`revision_request.json`. The dispatcher can
+read them through `LOOP_TASK_CONTRACT_FILE`, `LOOP_ACCEPTANCE_PLAN_FILE`,
+`LOOP_DEV_PLAN_FILE`, `LOOP_CHECKPOINTS_DIR`, and `LOOP_REVIEWS_DIR`; the queue
+run artifact records their paths, inferred risk level, human-gate flag,
+acceptance check counts, planned checkpoint count, produced checkpoint files,
+generated acceptance reviews, final judgement outcome, and revision request
+summary. It also records a `lineage` summary so later rounds can see the root
+task, current path, revision edges, and each known attempt's checkpoint,
+review, final judgement, and revision request status.
+
+`queue-lineage-bundle` turns that lineage into a human-readable Markdown review
+bundle plus a JSON sidecar under `runtime/loops/<queue>/lineage-bundles/`.
+The bundle highlights what each round produced, why acceptance failed, what the
+next revision requested, and whether the latest round is ready for human review.
+
+`queue-human-decision` records the human gate for a task under
+`runtime/loops/<queue>/tasks/<task_id>/human_review_decision.json`. Decisions
+are `approve`, `request_changes`, or `reject`. A `request_changes` decision
+also writes `human_revision_request.json`, and `--enqueue-revision` can create
+the next queued revision task from that feedback.
+
+`queue-revision-next` creates a fresh queued task from a failed task whose final
+judgement is `needs_revision`. It reads `revision_request.json`, embeds the
+revision goals in the new task body, and preserves the failed source task and
+artifacts. It can also use `human_revision_request.json` after a human
+`request_changes` decision.
 
 Operational commands:
 
@@ -167,6 +218,10 @@ loop-engineering queue-status --config configs/loops/queues/agent-tasks.json
 loop-engineering queue-peek --config configs/loops/queues/agent-tasks.json
 loop-engineering queue-cancel --config configs/loops/queues/agent-tasks.json --task-id <id>
 loop-engineering queue-requeue --config configs/loops/queues/agent-tasks.json --task-id <id>
+loop-engineering queue-revision-next --config configs/loops/queues/agent-tasks.json --task-id <id>
+loop-engineering queue-lineage --config configs/loops/queues/agent-tasks.json --task-id <id>
+loop-engineering queue-lineage-bundle --config configs/loops/queues/agent-tasks.json --task-id <id>
+loop-engineering queue-human-decision --config configs/loops/queues/agent-tasks.json --task-id <id> --decision approve
 ```
 
 `run-queue` uses a lease lock so overlapping cron ticks do not process the same
@@ -447,6 +502,14 @@ patch and cleaning that worktree, then reruns the queue's configured
 stage and reports the artifact to inspect. It still requires
 `--confirm-apply` and `--confirm-cleanup`, and it does not stage, commit, push,
 merge, or delete branches.
+
+`v0.4.0` adds collaboration artifacts for development and acceptance loops.
+Queue runs now create a task contract, acceptance plan, development plan,
+checkpoint directory, acceptance review files, final judgement, revision
+requests, lineage summaries, human review bundles, and human gate decision
+records. Human reviewers can approve, reject, or request changes with
+`queue-human-decision`; requested changes can be turned into the next revision
+task with `--enqueue-revision`.
 
 ## Skill
 

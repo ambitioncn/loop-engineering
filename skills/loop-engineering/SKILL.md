@@ -1,6 +1,6 @@
 ---
 name: loop-engineering
-description: "Loop engineering CLI v0.3.16 with end-to-end code task run."
+description: "Loop engineering CLI v0.4.0 with dev/acceptance loops and human gates."
 ---
 
 # Loop Engineering
@@ -13,7 +13,7 @@ wrapped with preflight, verification, local artifacts, and escalation rules.
 
 - Do not route ordinary chat or simple tasks into loop engineering.
 - Route only when the user explicitly says `走 loop`, `loop engineering`,
-  `丢进 Ironman loop`, `loop Ironman`, or `task-runner`.
+  `丢进 <queue> loop`, `走 task-runner`, or otherwise names a loop queue.
 - If the user says `走 loop 并立刻执行`, enqueue the task and immediately run one tick.
 - Keep high-risk actions gated: external sends, publishing, destructive commands,
   production config changes, memory deletion/migration, or credential changes still
@@ -36,6 +36,10 @@ loop-engineering queue-status --root /path/to/workspace --queue <queue>
 loop-engineering queue-peek --root /path/to/workspace --queue <queue>
 loop-engineering queue-cancel --root /path/to/workspace --queue <queue> --task-id <id>
 loop-engineering queue-requeue --root /path/to/workspace --queue <queue> --task-id <id>
+loop-engineering queue-revision-next --root /path/to/workspace --queue <queue> --task-id <id>
+loop-engineering queue-lineage --root /path/to/workspace --queue <queue> --task-id <id>
+loop-engineering queue-lineage-bundle --root /path/to/workspace --queue <queue> --task-id <id>
+loop-engineering queue-human-decision --root /path/to/workspace --queue <queue> --task-id <id> --decision approve|request_changes|reject
 loop-engineering code-queue-init --root /path/to/workspace --queue <queue>
 loop-engineering code-worktree-list --root /path/to/workspace --queue <queue>
 loop-engineering code-worktree-inspect --root /path/to/workspace --queue <queue> --task-id <id>
@@ -173,9 +177,36 @@ loop-engineering run-queue \
 
 The dispatcher receives `LOOP_TASK_ID`, `LOOP_TASK_TITLE`, `LOOP_TASK_BODY`,
 `LOOP_TASK_FILE`, `LOOP_TASK_FILE_REL`, `LOOP_QUEUE_ID`, `LOOP_RUN_ID`,
-`LOOP_ATTEMPT`, and `LOOP_MAX_ATTEMPTS`.
+`LOOP_ATTEMPT`, `LOOP_MAX_ATTEMPTS`, `LOOP_TASK_CONTRACT_FILE`,
+`LOOP_ACCEPTANCE_PLAN_FILE`, `LOOP_DEV_PLAN_FILE`, `LOOP_CHECKPOINTS_DIR`, and
+`LOOP_REVIEWS_DIR`.
 Keep dispatcher commands local to the target workspace and do not put private
 machine paths into public package templates.
+
+For v0.4 task runs, the queue runner writes `task_contract.json`,
+`acceptance_plan.json`, `dev_plan.json`, checkpoint files, acceptance review
+files, `final_judgement.json`, and `revision_request.json` when acceptance
+needs another development pass under
+`runtime/loops/<queue>/tasks/<task_id>/`. If acceptance needs changes, a
+dispatcher-successful task is marked `needs_revision` instead of completed,
+and the revision request carries compact next-round goals.
+
+Use `queue-revision-next` for a failed `needs_revision` task when the next
+development round should be enqueued without moving or overwriting the failed
+source task.
+
+Use `queue-lineage` to inspect a task's full revision chain, including the root
+task, current path, revision edges, known attempts, checkpoints, reviews, final
+judgements, and revision requests.
+
+Use `queue-lineage-bundle` to write a Markdown human review bundle and JSON
+sidecar for that chain under `runtime/loops/<queue>/lineage-bundles/`.
+
+Use `queue-human-decision` to record a human gate decision after inspecting a
+task, lineage, or bundle. It writes `human_review_decision.json` with
+`approve`, `request_changes`, or `reject`. `request_changes` also writes
+`human_revision_request.json`, and `--enqueue-revision` can immediately queue
+the next round from the human feedback.
 
 Use `queue-peek` before changing a queue by hand. Use `queue-cancel` to move a
 queued task to `canceled/`, and `queue-requeue` to move a failed, active, or

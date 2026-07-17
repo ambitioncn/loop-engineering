@@ -1,7 +1,7 @@
 # npm Package
 
 Package name: `agent-loop-engineering`
-Version: `0.3.16`
+Version: `0.4.0`
 
 Install from npm:
 
@@ -26,6 +26,10 @@ loop-engineering queue-status --root /path/to/workspace --queue <queue>
 loop-engineering queue-peek --root /path/to/workspace --queue <queue>
 loop-engineering queue-cancel --root /path/to/workspace --queue <queue> --task-id <id>
 loop-engineering queue-requeue --root /path/to/workspace --queue <queue> --task-id <id>
+loop-engineering queue-revision-next --root /path/to/workspace --queue <queue> --task-id <id>
+loop-engineering queue-lineage --root /path/to/workspace --queue <queue> --task-id <id>
+loop-engineering queue-lineage-bundle --root /path/to/workspace --queue <queue> --task-id <id>
+loop-engineering queue-human-decision --root /path/to/workspace --queue <queue> --task-id <id> --decision approve|request_changes|reject
 loop-engineering code-worktree-list --root /path/to/workspace --queue <queue>
 loop-engineering code-worktree-inspect --root /path/to/workspace --queue <queue> --task-id <id>
 loop-engineering code-worktree-diff --root /path/to/workspace --queue <queue> --task-id <id>
