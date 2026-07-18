@@ -12,5 +12,11 @@
     "retryExitCodes": [
       1
     ]
+  },
+  "revisionPolicy": {
+    "enabled": true,
+    "maxRevisionRounds": 3,
+    "sameFailureThreshold": 2,
+    "requireStrategyChange": true
   }
 }

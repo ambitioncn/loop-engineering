@@ -1,6 +1,6 @@
 ---
 name: loop-engineering
-description: "Loop engineering CLI v0.4.0 with dev/acceptance loops and human gates."
+description: "Loop engineering CLI v0.4.1 with dev/acceptance loops and human gates."
 ---
 
 # Loop Engineering
@@ -194,6 +194,12 @@ and the revision request carries compact next-round goals.
 Use `queue-revision-next` for a failed `needs_revision` task when the next
 development round should be enqueued without moving or overwriting the failed
 source task.
+
+`queue-revision-next` enforces the queue's `revisionPolicy` by default: up to 3
+revision rounds, block when the same revision-goal signature appears in 2
+consecutive rounds, and require a changed strategy or new evidence in the next
+task. Use `--force` only for an explicit human override after inspecting the
+lineage or bundle.
 
 Use `queue-lineage` to inspect a task's full revision chain, including the root
 task, current path, revision edges, known attempts, checkpoints, reviews, final

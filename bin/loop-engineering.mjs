@@ -115,7 +115,7 @@ Usage:
   loop-engineering queue-peek --queue name [--root <workspace>] [--json]
   loop-engineering queue-cancel --queue name --task-id id [--reason "..."] [--root <workspace>]
   loop-engineering queue-requeue --queue name --task-id id [--root <workspace>]
-  loop-engineering queue-revision-next --queue name --task-id id [--title "Title"] [--task "Body"] [--root <workspace>] [--json]
+  loop-engineering queue-revision-next --queue name --task-id id [--title "Title"] [--task "Body"] [--force] [--root <workspace>] [--json]
   loop-engineering queue-lineage --queue name --task-id id [--root <workspace>] [--json]
   loop-engineering queue-lineage-bundle --queue name --task-id id [--output review.md] [--force] [--root <workspace>] [--json]
   loop-engineering queue-human-decision --queue name --task-id id --decision approve|request_changes|reject [--comment "..."] [--enqueue-revision] [--force] [--root <workspace>] [--json]
@@ -436,7 +436,9 @@ async function queueRevisionNextCommand(args) {
   const options = mergeQueueOptions(config, args);
   const result = await queueRevisionNext(args.root, options.queue, args.taskId, {
     title: args.title,
-    task: args.task
+    task: args.task,
+    force: args.force,
+    revisionPolicy: options.revisionPolicy
   });
   if (args.json) {
     console.log(JSON.stringify(result, null, 2));
@@ -444,6 +446,9 @@ async function queueRevisionNextCommand(args) {
     console.log(`queued revision ${result.nextTask.id}: ${result.file}`);
     console.log(`  source task: ${result.sourceTaskId}`);
     console.log(`  revision request: ${result.revisionRequest}`);
+    if (result.revisionPolicyGuard?.reasons?.length) {
+      console.log(`  revision guard: ${result.revisionPolicyGuard.reasons.join('; ')}`);
+    }
   }
   return 0;
 }

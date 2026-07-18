@@ -1,6 +1,6 @@
 {
   "name": "agent-loop-engineering",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "private": false,
   "description": "OpenClaw-native loop engineering CLI, templates, and skill for verifiable agent work loops.",
   "type": "module",

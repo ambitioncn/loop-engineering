@@ -13,6 +13,12 @@
       1
     ]
   },
+  "revisionPolicy": {
+    "enabled": true,
+    "maxRevisionRounds": 3,
+    "sameFailureThreshold": 2,
+    "requireStrategyChange": true
+  },
   "worktree": {
     "enabled": true,
     "baseDir": "runtime/loops/code-tasks/worktrees",

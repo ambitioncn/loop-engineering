@@ -132,6 +132,12 @@ That writes `configs/loops/queues/agent-tasks.json`:
     "maxAttempts": 1,
     "retryDelayMs": 0,
     "retryExitCodes": [1]
+  },
+  "revisionPolicy": {
+    "enabled": true,
+    "maxRevisionRounds": 3,
+    "sameFailureThreshold": 2,
+    "requireStrategyChange": true
   }
 }
 ```
@@ -210,6 +216,15 @@ judgement is `needs_revision`. It reads `revision_request.json`, embeds the
 revision goals in the new task body, and preserves the failed source task and
 artifacts. It can also use `human_revision_request.json` after a human
 `request_changes` decision.
+
+`revisionPolicy` keeps the loop persistent without letting it repeat the same
+failed approach forever. By default, a lineage can create up to 3 revision
+rounds. If two consecutive rounds produce the same revision-goal signature,
+`queue-revision-next` refuses to enqueue another automatic round. The generated
+revision task also includes anti-loop instructions requiring a changed
+diagnosis, implementation tactic, evidence source, or verification step. Use
+`queue-lineage-bundle` and a human decision when the guard stops progress;
+`queue-revision-next --force` is reserved for explicit human overrides.
 
 Operational commands:
 
@@ -503,7 +518,8 @@ stage and reports the artifact to inspect. It still requires
 `--confirm-apply` and `--confirm-cleanup`, and it does not stage, commit, push,
 merge, or delete branches.
 
-`v0.4.0` adds collaboration artifacts for development and acceptance loops.
+`v0.4.1` adds revision persistence guards so development loops keep trying with
+new evidence or strategy changes while blocking repeated identical failures.
 Queue runs now create a task contract, acceptance plan, development plan,
 checkpoint directory, acceptance review files, final judgement, revision
 requests, lineage summaries, human review bundles, and human gate decision

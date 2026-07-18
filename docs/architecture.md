@@ -85,6 +85,13 @@ revision task using `revision_request.json`. It preserves the failed source
 task and run artifacts, then embeds the revision goals and next checkpoint id
 in the new task body.
 
+`revisionPolicy` is checked at this handoff point so persistence does not become
+mechanical repetition. The default policy allows up to 3 revision rounds and
+blocks another next-round enqueue when two consecutive attempts have the same
+revision-goal signature. Revision task bodies include anti-loop instructions
+requiring the next agent to change diagnosis, tactic, evidence, or verification;
+a human can still override the guard with `queue-revision-next --force`.
+
 `queue-lineage` is the read-only attempt graph view. It can start from any task
 in the chain and returns the root task id, current path, revision edges, known
 attempts, checkpoint/review summaries, final judgement outcomes, and revision
