@@ -97,6 +97,12 @@ function parseArgs(argv) {
   return args;
 }
 
+function printProgressEvent(event) {
+  const prefix = `[${event.phase}] ${event.status}`;
+  const detail = event.message ? ` - ${event.message}` : '';
+  console.error(`${prefix}${detail}`);
+}
+
 const HELP = `loop-engineering - verifiable agent work loops
 
 Usage:
@@ -357,7 +363,8 @@ async function runQueueCommand(args) {
   const config = await loadQueueConfig(args.root, args.config);
   const options = mergeQueueOptions(config, {
     ...args,
-    retry: buildRetryArgs(args, config.retry)
+    retry: buildRetryArgs(args, config.retry),
+    onProgress: args.json ? undefined : printProgressEvent
   });
   const result = await runQueueOnce(args.root, options);
   if (args.json) {
@@ -865,7 +872,8 @@ async function codeTaskRunCommand(args) {
     timeoutMs: args.timeoutMs,
     allowDirty: args.allowDirty,
     confirmApply: args.confirmApply,
-    confirmCleanup: args.confirmCleanup
+    confirmCleanup: args.confirmCleanup,
+    onProgress: args.json ? undefined : printProgressEvent
   });
   if (args.json) {
     console.log(JSON.stringify(result, null, 2));

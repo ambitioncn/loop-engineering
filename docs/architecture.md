@@ -139,6 +139,20 @@ through environment variables such as `LOOP_TASK_BODY`, `LOOP_TASK_FILE`, and
 `LOOP_RUN_ID`, so each workspace can decide how to hand off work without baking
 private machine paths or credentials into public templates.
 
+Queue command execution uses an isolated process group. When a dispatcher,
+preflight, or verification command times out, the runner sends SIGTERM and then
+SIGKILL to the whole process group so child processes do not survive the failed
+run. This matters for device and instrumentation work where a shell wrapper may
+spawn long-lived `adb`, `frida`, `tcpdump`, or proxy processes.
+
+Dispatcher retry is also failure-aware. The queue `retry` config can list
+`requiresHumanActionPatterns`; matching output marks the run
+`needs_human_input` and stops retry. Defaults cover common device authorization,
+permission, and explicit human-approval blockers, including
+`INSTALL_FAILED_USER_RESTRICTED`. These states are treated as blocked human
+gates rather than development failures, so `queue-revision-next` does not turn a
+phone permission prompt into repeated automated attempts.
+
 ## Code Worktree Queue
 
 `v0.3.0` adds assisted code queues:

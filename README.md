@@ -131,7 +131,17 @@ That writes `configs/loops/queues/agent-tasks.json`:
   "retry": {
     "maxAttempts": 1,
     "retryDelayMs": 0,
-    "retryExitCodes": [1]
+    "retryExitCodes": [1],
+    "requiresHumanActionPatterns": [
+      "INSTALL_FAILED_USER_RESTRICTED",
+      "device unauthorized",
+      "no devices/emulators found",
+      "Permission denied",
+      "Operation not permitted",
+      "requires human",
+      "需要人工",
+      "权限未开"
+    ]
   },
   "revisionPolicy": {
     "enabled": true,
@@ -200,6 +210,20 @@ summary. It also records a `lineage` summary so later rounds can see the root
 task, current path, revision edges, and each known attempt's checkpoint,
 review, final judgement, and revision request status.
 
+Live instrumentation and process-control requests are gated even when they are
+local-only. Tasks mentioning tools or actions such as `frida`, `tcpdump`,
+`adb`, `mitmproxy`, `hook`, `spawn`, `attach`, `decrypt`, `pcap`, `su`, `kill`,
+or `pkill` are inferred as at least L2; destructive process cleanup is inferred
+as L3. Dispatchers should stop at artifacts and wait for human review before
+running those actions.
+
+`run-queue` reports progress as it works so long-running tasks do not feel like
+a black box. In normal CLI mode it prints concise stage events to stderr for
+queue activation, planning, preflight, worktree setup, dispatch attempts,
+verification, acceptance review, final judgement, revision requests, and final
+queue status. `--json` keeps stdout/stderr machine-clean while still including
+the same events in the returned JSON and the run artifact as `progress`.
+
 `queue-lineage-bundle` turns that lineage into a human-readable Markdown review
 bundle plus a JSON sidecar under `runtime/loops/<queue>/lineage-bundles/`.
 The bundle highlights what each round produced, why acceptance failed, what the
@@ -243,6 +267,15 @@ loop-engineering queue-human-decision --config configs/loops/queues/agent-tasks.
 task. `staleActiveMs` moves abandoned active tasks to `failed/` before the next
 task is processed. `retry.maxAttempts` retries dispatcher failures whose exit
 code is listed in `retry.retryExitCodes`.
+
+Dispatcher command timeouts terminate the whole spawned process group, not just
+the shell wrapper, so child processes such as `frida`, `tcpdump`, or `adb`
+cannot keep running after the queue run has timed out. Dispatcher failures are
+also classified before retry: output matching
+`retry.requiresHumanActionPatterns` is marked `requires_human_action`, the task
+finishes as `needs_human_input`, and no automatic retry is attempted. Use this
+for device permissions, human approval prompts, missing authorization, or other
+states where another run would repeat the same blocker.
 
 Queue artifacts live under:
 
@@ -526,6 +559,14 @@ requests, lineage summaries, human review bundles, and human gate decision
 records. Human reviewers can approve, reject, or request changes with
 `queue-human-decision`; requested changes can be turned into the next revision
 task with `--enqueue-revision`.
+
+`v0.4.2` hardens queue execution around live instrumentation failures. Command
+timeouts now terminate the whole spawned process group, dispatcher output can be
+classified as `requires_human_action` to stop retry, and default queue templates
+recognize common device authorization and permission blockers such as
+`INSTALL_FAILED_USER_RESTRICTED`. Task contracts also gate `frida`, `tcpdump`,
+`adb`, process control, device install, and root shell work behind human review.
+Queue runs now record and print concise progress events for long-running work.
 
 ## Skill
 

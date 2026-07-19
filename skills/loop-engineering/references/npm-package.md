@@ -1,7 +1,7 @@
 # npm Package
 
 Package name: `agent-loop-engineering`
-Version: `0.4.1`
+Version: `0.4.2`
 
 Install from npm:
 

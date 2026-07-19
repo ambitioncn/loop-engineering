@@ -1,6 +1,6 @@
 ---
 name: loop-engineering
-description: "Loop engineering CLI v0.4.1 with dev/acceptance loops and human gates."
+description: "Loop engineering CLI v0.4.2 with dev/acceptance loops and human gates."
 ---
 
 # Loop Engineering
@@ -18,6 +18,17 @@ wrapped with preflight, verification, local artifacts, and escalation rules.
 - Keep high-risk actions gated: external sends, publishing, destructive commands,
   production config changes, memory deletion/migration, or credential changes still
   require separate confirmation.
+- Treat live instrumentation and process-control tasks as gated even when local:
+  `frida`, `tcpdump`, `adb`, `mitmproxy`, `hook`, `spawn`, `attach`, `decrypt`,
+  `pcap`, `su`, `kill`, `pkill`, and similar device/process work must stop at
+  artifacts and human review unless explicitly approved for execution.
+- Treat device permission prompts, missing authorization, and explicit
+  human-action blockers as stop conditions, not retryable failures. In
+  particular, `INSTALL_FAILED_USER_RESTRICTED` means the human must fix phone
+  USB install permission before another install attempt.
+- Queue command timeouts should terminate the whole spawned process group; after
+  any timeout involving live instrumentation, verify that no child `frida`,
+  `tcpdump`, `adb`, or proxy process remains.
 
 ## CLI
 
@@ -156,7 +167,17 @@ Queue configs live under `configs/loops/queues/<queue>.json` and can define:
   "retry": {
     "maxAttempts": 1,
     "retryDelayMs": 0,
-    "retryExitCodes": [1]
+    "retryExitCodes": [1],
+    "requiresHumanActionPatterns": [
+      "INSTALL_FAILED_USER_RESTRICTED",
+      "device unauthorized",
+      "no devices/emulators found",
+      "Permission denied",
+      "Operation not permitted",
+      "requires human",
+      "需要人工",
+      "权限未开"
+    ]
   }
 }
 ```

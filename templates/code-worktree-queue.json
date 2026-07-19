@@ -11,6 +11,16 @@
     "retryDelayMs": 0,
     "retryExitCodes": [
       1
+    ],
+    "requiresHumanActionPatterns": [
+      "INSTALL_FAILED_USER_RESTRICTED",
+      "device unauthorized",
+      "no devices/emulators found",
+      "Permission denied",
+      "Operation not permitted",
+      "requires human",
+      "需要人工",
+      "权限未开"
     ]
   },
   "revisionPolicy": {
